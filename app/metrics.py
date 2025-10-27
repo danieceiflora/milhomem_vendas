@@ -1,10 +1,11 @@
-from django.db.models import Sum, F
+from decimal import Decimal
+from django.db.models import Sum, F, DecimalField, ExpressionWrapper
 from django.utils.formats import number_format
 from django.utils import timezone
 from brands.models import Brand
 from categories.models import Category
 from products.models import Product
-from outflows.models import Outflow
+from outflows.models import Outflow, OutflowItem
 
 
 def get_product_metrics():
@@ -24,9 +25,21 @@ def get_product_metrics():
 
 def get_sales_metrics():
     total_sales = Outflow.objects.count()
-    total_products_sold = Outflow.objects.aggregate(total_products_sold=Sum('quantity'))['total_products_sold'] or 0
-    total_sales_value = sum(outflow.quantity * outflow.product.selling_price for outflow in Outflow.objects.all())
-    total_sales_cost = sum(outflow.quantity * outflow.product.cost_price for outflow in Outflow.objects.all())
+    items_qs = OutflowItem.objects.all()
+
+    total_products_sold = items_qs.aggregate(total=Sum('quantity'))['total'] or 0
+
+    value_expr = ExpressionWrapper(
+        F('quantity') * F('unit_price'),
+        output_field=DecimalField(max_digits=20, decimal_places=2),
+    )
+    cost_expr = ExpressionWrapper(
+        F('quantity') * F('unit_cost'),
+        output_field=DecimalField(max_digits=20, decimal_places=2),
+    )
+
+    total_sales_value = items_qs.aggregate(total=Sum(value_expr))['total'] or Decimal('0')
+    total_sales_cost = items_qs.aggregate(total=Sum(cost_expr))['total'] or Decimal('0')
     total_sales_profit = total_sales_value - total_sales_cost
 
     return dict(
@@ -42,12 +55,17 @@ def get_daily_sales_data():
     dates = [str(today - timezone.timedelta(days=i)) for i in range(6, -1, -1)]
     values = list()
 
+    value_expr = ExpressionWrapper(
+        F('quantity') * F('unit_price'),
+        output_field=DecimalField(max_digits=20, decimal_places=2),
+    )
+
     for date in dates:
-        sales_total = Outflow.objects.filter(
-            created_at__date=date
+        sales_total = OutflowItem.objects.filter(
+            outflow__created_at__date=date
         ).aggregate(
-            total_sales=Sum(F('product__selling_price') * F('quantity'))
-        )['total_sales'] or 0
+            total_sales=Sum(value_expr)
+        )['total_sales'] or Decimal('0')
         values.append(float(sales_total))
 
     return dict(
@@ -62,7 +80,7 @@ def get_daily_sales_quantity_data():
     quantities = list()
 
     for date in dates:
-        sales_quantity = Outflow.objects.filter(created_at__date=date).count()
+        sales_quantity = OutflowItem.objects.filter(outflow__created_at__date=date).aggregate(total=Sum('quantity'))['total'] or 0
         quantities.append(sales_quantity)
 
     return dict(

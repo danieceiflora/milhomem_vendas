@@ -4,7 +4,7 @@ from django.core import serializers
 from openai import OpenAI
 from ai import prompts, models
 from products.models import Product
-from outflows.models import Outflow
+from outflows.models import Outflow, OutflowItem
 
 
 class SGEAgent:
@@ -17,9 +17,11 @@ class SGEAgent:
     def __get_data(self):
         products = Product.objects.all()
         outflows = Outflow.objects.all()
+        outflow_items = OutflowItem.objects.select_related('outflow', 'product')
         return json.dumps({
             'products': serializers.serialize('json', products),
             'outflows': serializers.serialize('json', outflows),
+            'outflow_items': serializers.serialize('json', outflow_items),
         })
 
     def invoke(self):

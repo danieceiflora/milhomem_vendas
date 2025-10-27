@@ -1,0 +1,55 @@
+<div class="rounded-lg border border-border bg-secondary/20 p-4 space-y-4 relative" data-form-prefix="{{ form.prefix }}">
+  {{ form.id }}
+  {{ form.DELETE.as_hidden }}
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="space-y-2">
+      <label for="{{ form.product.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+        <i data-lucide="package" class="h-4 w-4 text-primary"></i>
+        <span>Produto</span>
+      </label>
+      {{ form.product }}
+      {% if form.product.errors %}
+        <div class="text-red-400 text-sm flex items-center space-x-1">
+          <i data-lucide="alert-circle" class="h-4 w-4"></i>
+          <span>{{ form.product.errors.0 }}</span>
+        </div>
+      {% endif %}
+    </div>
+    <div class="space-y-2">
+      <label for="{{ form.quantity.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+        <i data-lucide="hash" class="h-4 w-4 text-primary"></i>
+        <span>Quantidade</span>
+      </label>
+      {{ form.quantity }}
+      {% if form.quantity.errors %}
+        <div class="text-red-400 text-sm flex items-center space-x-1">
+          <i data-lucide="alert-circle" class="h-4 w-4"></i>
+          <span>{{ form.quantity.errors.0 }}</span>
+        </div>
+      {% endif %}
+    </div>
+    <div class="space-y-2">
+      <label for="{{ form.unit_price.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+        <i data-lucide="dollar-sign" class="h-4 w-4 text-primary"></i>
+        <span>Preço unitário (R$)</span>
+      </label>
+      {{ form.unit_price }}
+      {% if form.unit_price.errors %}
+        <div class="text-red-400 text-sm flex items-center space-x-1">
+          <i data-lucide="alert-circle" class="h-4 w-4"></i>
+          <span>{{ form.unit_price.errors.0 }}</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  {% if form.non_field_errors %}
+    <div class="text-red-400 text-sm flex items-center space-x-1">
+      <i data-lucide="alert-octagon" class="h-4 w-4"></i>
+      <span>{{ form.non_field_errors.0 }}</span>
+    </div>
+  {% endif %}
+  <button type="button" class="remove-item absolute top-4 right-4 inline-flex items-center space-x-1 text-xs font-medium text-destructive hover:text-destructive-foreground hover:bg-destructive/20 px-2 py-1 rounded">
+    <i data-lucide="x" class="h-3 w-3"></i>
+    <span>Remover</span>
+  </button>
+</div>

@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Detalhes do Cliente - {{ object.full_name }}
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-400 bg-clip-text text-transparent">
+        Detalhes do Cliente
+      </h1>
+      <p class="text-muted-foreground mt-2">Visualize as informações completas do cliente</p>
+    </div>
+    <div class="flex items-center space-x-2">
+      <div class="h-2 w-2 bg-emerald-500 rounded-full animate-pulse"></div>
+      <span class="text-sm text-muted-foreground">ID: {{ object.id }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-5xl mx-auto">
+  <div class="rounded-lg border border-border bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-emerald-500/10 p-8 glass-effect">
+    <div class="flex items-center space-x-4 mb-8">
+      <div class="h-16 w-16 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+        <i data-lucide="user" class="h-8 w-8 text-white"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold text-primary">{{ object.full_name }}</h2>
+        <p class="text-muted-foreground">Cliente cadastrado em {{ object.created_at|date:"d/m/Y" }}</p>
+      </div>
+      <div class="ml-auto flex space-x-2">
+        {% if perms.customers.change_customer %}
+          <a href="{% url 'customer_update' object.id %}" class="inline-flex items-center space-x-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200">
+            <i data-lucide="pencil" class="h-4 w-4"></i>
+            <span>Editar</span>
+          </a>
+        {% endif %}
+        {% if perms.customers.delete_customer %}
+          <a href="{% url 'customer_delete' object.id %}" class="inline-flex items-center space-x-2 bg-destructive hover:bg-destructive/80 text-destructive-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200">
+            <i data-lucide="trash-2" class="h-4 w-4"></i>
+            <span>Excluir</span>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2 text-muted-foreground">
+          <i data-lucide="calendar" class="h-4 w-4 text-emerald-400"></i>
+          <span>Data de nascimento</span>
+        </div>
+        <p class="text-lg font-semibold pl-6">{{ object.date_of_birth|date:"d/m/Y" }}</p>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2 text-muted-foreground">
+          <i data-lucide="mail" class="h-4 w-4 text-emerald-400"></i>
+          <span>E-mail</span>
+        </div>
+        <p class="text-lg font-semibold pl-6">{{ object.email }}</p>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2 text-muted-foreground">
+          <i data-lucide="phone" class="h-4 w-4 text-emerald-400"></i>
+          <span>Telefone</span>
+        </div>
+        <p class="text-lg font-semibold pl-6">{{ object.phone|default:'-' }}</p>
+      </div>
+      <div class="space-y-2">
+        <div class="flex items-center space-x-2 text-muted-foreground">
+          <i data-lucide="id-card" class="h-4 w-4 text-emerald-400"></i>
+          <span>CPF</span>
+        </div>
+        <p class="text-lg font-semibold pl-6">{{ object.formatted_cpf }}</p>
+      </div>
+    </div>
+
+    <div class="bg-secondary/30 rounded-lg p-4 border border-border/50 mb-8">
+      <div class="flex items-center space-x-2 mb-3">
+        <i data-lucide="map-pin" class="h-4 w-4 text-emerald-400"></i>
+        <span class="text-sm font-medium text-muted-foreground">Endereço</span>
+      </div>
+      <p class="text-foreground leading-relaxed">{{ object.address|default:'Não informado' }}</p>
+    </div>
+
+    <div class="flex justify-end">
+      <a href="{% url 'customer_list' %}" class="inline-flex items-center space-x-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200">
+        <i data-lucide="arrow-left" class="h-4 w-4"></i>
+        <span>Voltar</span>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

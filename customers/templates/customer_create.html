@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Cadastrar Cliente
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-sky-400 via-blue-400 to-sky-400 bg-clip-text text-transparent">
+        Cadastrar Cliente
+      </h1>
+      <p class="text-muted-foreground mt-2">Inclua um novo cliente na base do sistema</p>
+    </div>
+    <div class="flex items-center space-x-2">
+      <div class="h-2 w-2 bg-sky-500 rounded-full animate-pulse"></div>
+      <span class="text-sm text-muted-foreground">Novo Cliente</span>
+    </div>
+  </div>
+</div>
+
+<div class="max-w-3xl mx-auto">
+  <div class="rounded-lg border border-border bg-gradient-to-br from-sky-500/10 via-blue-500/5 to-sky-500/10 p-8 glass-effect">
+    <div class="flex items-center space-x-4 mb-8">
+      <div class="h-16 w-16 bg-gradient-to-r from-sky-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+        <i data-lucide="user-plus" class="h-8 w-8 text-white"></i>
+      </div>
+      <div>
+        <h2 class="text-2xl font-bold text-primary">Informações do Cliente</h2>
+        <p class="text-muted-foreground">Preencha os dados abaixo para cadastrar o cliente</p>
+      </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+      {% csrf_token %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% for field in form %}
+          <div class="space-y-2">
+            <label for="{{ field.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+              {% if field.name == 'full_name' %}
+                <i data-lucide="user" class="h-4 w-4 text-sky-400"></i>
+              {% elif field.name == 'date_of_birth' %}
+                <i data-lucide="calendar" class="h-4 w-4 text-sky-400"></i>
+              {% elif field.name == 'phone' %}
+                <i data-lucide="phone" class="h-4 w-4 text-sky-400"></i>
+              {% elif field.name == 'email' %}
+                <i data-lucide="mail" class="h-4 w-4 text-sky-400"></i>
+              {% elif field.name == 'address' %}
+                <i data-lucide="map-pin" class="h-4 w-4 text-sky-400"></i>
+              {% else %}
+                <i data-lucide="id-card" class="h-4 w-4 text-sky-400"></i>
+              {% endif %}
+              <span>{{ field.label }}</span>
+            </label>
+
+            {% if field.field.widget.input_type == 'textarea' %}
+              <textarea
+                name="{{ field.name }}"
+                id="{{ field.id_for_label }}"
+                rows="4"
+                class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                {% if field.field.required %}required{% endif %}
+              >{{ field.value|default:'' }}</textarea>
+            {% else %}
+              <input
+                type="{{ field.field.widget.input_type|default:'text' }}"
+                name="{{ field.name }}"
+                id="{{ field.id_for_label }}"
+                value="{{ field.value|default:'' }}"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                {% if field.field.required %}required{% endif %}
+              >
+            {% endif %}
+
+            {% if field.help_text %}
+              <p class="text-xs text-muted-foreground">{{ field.help_text }}</p>
+            {% endif %}
+
+            {% if field.errors %}
+              <div class="text-red-400 text-sm flex items-center space-x-1">
+                <i data-lucide="alert-circle" class="h-4 w-4"></i>
+                <span>{{ field.errors.0 }}</span>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="text-red-400 text-sm flex items-center space-x-1">
+          <i data-lucide="alert-octagon" class="h-4 w-4"></i>
+          <span>{{ form.non_field_errors.0 }}</span>
+        </div>
+      {% endif %}
+
+      <div class="flex flex-wrap items-center justify-between pt-6 border-t border-border/40">
+        <button type="submit" class="inline-flex items-center space-x-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+          <i data-lucide="save" class="h-4 w-4"></i>
+          <span>Salvar Cliente</span>
+        </button>
+        <a href="{% url 'customer_list' %}" class="inline-flex items-center space-x-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200">
+          <i data-lucide="arrow-left" class="h-4 w-4"></i>
+          <span>Cancelar</span>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

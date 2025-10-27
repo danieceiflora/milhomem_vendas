@@ -73,6 +73,17 @@
           </a>
         </li>
         {% endif %}
+
+        {% if perms.customers.view_customer %}
+        <li>
+          <a href="{% url 'customer_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex h-6 w-6 items-center justify-center">
+              <i data-lucide="users" class="h-4 w-4"></i>
+            </div>
+            <span>Clientes</span>
+          </a>
+        </li>
+        {% endif %}
         
         <!-- Divider -->
         <li>

@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'categories',
     'products',
     'inflows',
+    'customers',
     'outflows',
     'ai',
 ]
