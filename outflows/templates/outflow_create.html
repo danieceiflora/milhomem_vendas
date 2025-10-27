@@ -97,12 +97,12 @@ Cadastrar Venda
 
         <div id="items-formset" class="space-y-4">
           {% for item_form in formset.forms %}
-            {% include 'outflows/components/_outflow_item_form.html' with form=item_form %}
+            {% include 'components/_outflow_item_form.html' with form=item_form %}
           {% endfor %}
         </div>
 
         <template id="item-form-template">
-          {% include 'outflows/components/_outflow_item_form.html' with form=formset.empty_form %}
+          {% include 'components/_outflow_item_form.html' with form=formset.empty_form %}
         </template>
       </div>
 
