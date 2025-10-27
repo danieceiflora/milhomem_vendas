@@ -16,6 +16,6 @@ COPY ./cron /etc/cron.d/cron
 RUN chmod 0644 /etc/cron.d/cron
 RUN crontab /etc/cron.d/cron
 
-EXPOSE 8000
+EXPOSE 8001
 
-CMD cron ; python manage.py migrate && python manage.py runserver 0.0.0.0:8000
+CMD cron ; python manage.py migrate && python manage.py runserver 0.0.0.0:8001
