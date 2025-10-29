@@ -7,7 +7,7 @@ from django.db.models import Prefetch
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, TemplateView
 from rest_framework import generics
 from app import metrics
 from customers.models import Customer
@@ -260,6 +260,21 @@ class OutflowDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         context['final_amount'] = self.object.final_amount
         context['total_cost'] = self.object.total_cost
         context['total_profit'] = self.object.total_profit
+        return context
+
+
+class OutflowReturnLandingView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    template_name = 'outflow_returns.html'
+    permission_required = 'outflows.view_outflow'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(
+            {
+                'section_title': 'Trocas e Devoluções',
+                'section_description': 'Gerencie solicitações de troca e devolução vinculadas às vendas.',
+            },
+        )
         return context
 
 

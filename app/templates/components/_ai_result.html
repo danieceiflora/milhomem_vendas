@@ -1,11 +1,11 @@
 {% load markdown_extras %}
-<!-- SGE Agent Section -->
+<!-- PINKMANIA Agent Section -->
 <div class="mb-8">
   <div class="rounded-lg border border-border bg-gradient-to-br from-purple-500/10 via-blue-500/5 to-purple-500/10 glass-effect overflow-hidden">
     <!-- Agent Header -->
     <div class="cursor-pointer p-6 hover:bg-accent/20 transition-all duration-300" 
-         onclick="toggleSGEAgent()" 
-         id="sge-agent-header">
+         onclick="togglePINKMANIAAgent()" 
+         id="PINKMANIA-agent-header">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
           <!-- AI Icon with Glow Effect -->
@@ -17,7 +17,7 @@
           </div>
           <div>
             <h3 class="text-xl font-bold bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
-              SGE Agent
+              PINKMANIA Agent
             </h3>
             <p class="text-muted-foreground text-sm">Assistente Inteligente de Gestão</p>
           </div>
@@ -27,7 +27,7 @@
             <div class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             <span class="text-xs text-muted-foreground">Ativo</span>
           </div>
-          <div class="transition-transform duration-300" id="sge-agent-chevron">
+          <div class="transition-transform duration-300" id="PINKMANIA-agent-chevron">
             <i data-lucide="chevron-down" class="h-5 w-5 text-muted-foreground"></i>
           </div>
         </div>
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Agent Content (Collapsible) -->
-    <div class="hidden transition-all duration-500 ease-in-out" id="sge-agent-content">
+    <div class="hidden transition-all duration-500 ease-in-out" id="PINKMANIA-agent-content">
       <div class="border-t border-border/40 p-6 space-y-6">
         <!-- AI Insights Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -92,10 +92,10 @@
 </div>
 
 <script>
-function toggleSGEAgent() {
-  const content = document.getElementById('sge-agent-content');
-  const chevron = document.getElementById('sge-agent-chevron');
-  const header = document.getElementById('sge-agent-header');
+function togglePINKMANIAAgent() {
+  const content = document.getElementById('PINKMANIA-agent-content');
+  const chevron = document.getElementById('PINKMANIA-agent-chevron');
+  const header = document.getElementById('PINKMANIA-agent-header');
   
   if (content.classList.contains('hidden')) {
     // Show content
