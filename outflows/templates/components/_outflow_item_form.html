@@ -2,12 +2,40 @@
   {{ form.id }}
   {{ form.DELETE.as_hidden }}
   <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="space-y-2">
-      <label for="{{ form.product.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+    <div class="space-y-2 md:col-span-2 lg:col-span-1">
+      <label for="{{ form.product.id_for_label }}_search" class="text-sm font-medium leading-none flex items-center space-x-2">
         <i data-lucide="package" class="h-4 w-4 text-primary"></i>
         <span>Produto</span>
       </label>
       {{ form.product }}
+      <div class="space-y-3">
+        <div class="relative">
+          <input
+            type="text"
+            placeholder="Busque por código, série ou nome do produto"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            autocomplete="off"
+            id="{{ form.product.id_for_label }}_search"
+            data-product-search
+          >
+          <div class="absolute left-0 right-0 mt-2 max-h-56 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden" data-product-results></div>
+        </div>
+        <div class="hidden space-y-2 rounded-lg border border-primary/20 bg-primary/10 p-4" data-product-selected>
+          <div>
+            <p class="font-medium text-foreground" data-product-name></p>
+            <p class="text-xs text-muted-foreground" data-product-code></p>
+          </div>
+          <div class="flex items-center justify-between text-xs text-muted-foreground">
+            <span data-product-stock></span>
+            <span class="font-semibold text-primary" data-product-price></span>
+          </div>
+          <button type="button" class="inline-flex items-center space-x-1 text-xs font-medium text-primary hover:text-primary/80" data-product-clear>
+            <i data-lucide="refresh-cw" class="h-3 w-3"></i>
+            <span>Trocar produto</span>
+          </button>
+        </div>
+        <p class="text-xs text-muted-foreground" data-product-helper>Selecione um produto para liberar quantidade e preço.</p>
+      </div>
       {% if form.product.errors %}
         <div class="text-red-400 text-sm flex items-center space-x-1">
           <i data-lucide="alert-circle" class="h-4 w-4"></i>

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-  SGE - Saídas
+  SGE - Vendas
 {% endblock %}
 
 {% block content %}
@@ -24,16 +24,24 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-3xl font-bold bg-gradient-to-r from-red-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
-        Saídas
+        Vendas
       </h1>
-      <p class="text-muted-foreground mt-2">Registre e acompanhe as saídas de produtos do estoque</p>
+      <p class="text-muted-foreground mt-2">Registre e acompanhe as vendas realizadas</p>
     </div>
-    {% if perms.outflows.add_outflow %}
-      <a href="{% url 'outflow_create' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 group">
-        <i data-lucide="plus" class="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200"></i>
-        Nova Saída
-      </a>
-    {% endif %}
+    <div class="flex items-center space-x-2">
+      {% if perms.outflows.view_paymentmethod %}
+        <a href="{% url 'payment_method_list' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+          <i data-lucide="credit-card" class="w-4 h-4 mr-2"></i>
+          Métodos de pagamento
+        </a>
+      {% endif %}
+      {% if perms.outflows.add_outflow %}
+        <a href="{% url 'outflow_create' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 group">
+          <i data-lucide="plus" class="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200"></i>
+          Nova Venda
+        </a>
+      {% endif %}
+    </div>
   </div>
 </div>
 
@@ -88,8 +96,10 @@
         <tr class="border-b border-border">
           <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Venda</th>
           <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cliente</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Itens</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Itens líquidos</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total bruto</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Desconto</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total final</th>
           <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Data</th>
           <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ações</th>
         </tr>
@@ -98,9 +108,15 @@
         {% for outflow in outflows %}
           <tr class="border-b border-border transition-colors hover:bg-muted/50">
             <td class="p-4 align-middle">
-              <a href="{% url 'outflow_detail' outflow.id %}" class="font-medium text-primary hover:text-primary/80 transition-colors">
-                #{{ outflow.id }}
-              </a>
+              <div class="flex flex-col">
+                <a href="{% url 'outflow_detail' outflow.id %}" class="font-medium text-primary hover:text-primary/80 transition-colors">
+                  #{{ outflow.id }}
+                </a>
+                <span class="text-xs uppercase tracking-wide text-muted-foreground">{{ outflow.get_operation_type_display }}</span>
+                {% if outflow.payment_method %}
+                  <span class="text-xs text-muted-foreground">Pagamento: {{ outflow.payment_method.name }}</span>
+                {% endif %}
+              </div>
             </td>
             <td class="p-4 align-middle">
               <div class="flex items-center space-x-3">
@@ -114,14 +130,46 @@
               </div>
             </td>
             <td class="p-4 align-middle">
-              <span class="inline-flex items-center rounded-full bg-red-500/20 px-2 py-1 text-sm font-medium text-red-300">
-                {{ outflow.computed_total_items }} produto(s)
-              </span>
+              {% if outflow.computed_total_items < 0 %}
+                <span class="inline-flex items-center rounded-full bg-indigo-500/20 px-2 py-1 text-sm font-medium text-indigo-300">
+                  {{ outflow.computed_total_items }} produto(s)
+                </span>
+              {% else %}
+                <span class="inline-flex items-center rounded-full bg-red-500/20 px-2 py-1 text-sm font-medium text-red-300">
+                  {{ outflow.computed_total_items }} produto(s)
+                </span>
+              {% endif %}
             </td>
             <td class="p-4 align-middle">
-              <span class="font-semibold text-emerald-400">
-                R$ {{ outflow.computed_total_amount|default:0|floatformat:2 }}
-              </span>
+              {% if outflow.computed_total_amount < 0 %}
+                <span class="font-semibold text-rose-400">
+                  R$ {{ outflow.computed_total_amount|default:0|floatformat:2 }}
+                </span>
+              {% else %}
+                <span class="font-semibold text-emerald-400">
+                  R$ {{ outflow.computed_total_amount|default:0|floatformat:2 }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="p-4 align-middle">
+              {% if outflow.computed_discount_amount > 0 %}
+                <span class="font-semibold text-amber-300">
+                  -R$ {{ outflow.computed_discount_amount|floatformat:2 }}
+                </span>
+              {% else %}
+                <span class="text-muted-foreground">—</span>
+              {% endif %}
+            </td>
+            <td class="p-4 align-middle">
+              {% if outflow.computed_final_amount < 0 %}
+                <span class="font-semibold text-rose-400">
+                  R$ {{ outflow.computed_final_amount|floatformat:2 }}
+                </span>
+              {% else %}
+                <span class="font-semibold text-emerald-300">
+                  R$ {{ outflow.computed_final_amount|floatformat:2 }}
+                </span>
+              {% endif %}
             </td>
             <td class="p-4 align-middle">
               <div class="text-sm">
@@ -139,7 +187,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6" class="p-8 text-center">
+            <td colspan="8" class="p-8 text-center">
               <div class="flex flex-col items-center space-y-3">
                 <div class="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
                   <i data-lucide="shopping-bag" class="w-6 h-6 text-muted-foreground"></i>

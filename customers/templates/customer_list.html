@@ -100,11 +100,7 @@
                     <i data-lucide="pencil" class="w-3 h-3"></i>
                   </a>
                 {% endif %}
-                {% if perms.customers.delete_customer %}
-                  <a href="{% url 'customer_delete' customer.id %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground h-8 w-8">
-                    <i data-lucide="trash-2" class="w-3 h-3"></i>
-                  </a>
-                {% endif %}
+                
               </div>
             </td>
           </tr>

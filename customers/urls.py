@@ -7,7 +7,6 @@ urlpatterns = [
     path('customers/create/', views.CustomerCreateView.as_view(), name='customer_create'),
     path('customers/<int:pk>/detail/', views.CustomerDetailView.as_view(), name='customer_detail'),
     path('customers/<int:pk>/update/', views.CustomerUpdateView.as_view(), name='customer_update'),
-    path('customers/<int:pk>/delete/', views.CustomerDeleteView.as_view(), name='customer_delete'),
 
     path('api/v1/customers/', views.CustomerListCreateAPIView.as_view(), name='customer-list-create-api'),
     path('api/v1/customers/<int:pk>/', views.CustomerRetrieveUpdateDestroyAPIView.as_view(), name='customer-detail-api'),

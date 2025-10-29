@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Gerenciar Métodos de Pagamento
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-rose-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">
+        Métodos de Pagamento
+      </h1>
+      <p class="text-muted-foreground mt-2">Cadastre e gerencie os métodos de pagamento usados nas vendas.</p>
+    </div>
+    <div class="flex items-center space-x-2">
+      <div class="h-2 w-2 bg-rose-500 rounded-full animate-pulse"></div>
+      <span class="text-sm text-muted-foreground">Central de pagamentos</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  <div class="lg:col-span-1">
+    <div class="rounded-lg border border-border bg-gradient-to-br from-rose-500/10 via-orange-500/5 to-rose-500/10 p-6 glass-effect">
+      <div class="flex items-center space-x-3 mb-6">
+        <div class="h-12 w-12 rounded-xl bg-gradient-to-r from-rose-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+          <i data-lucide="credit-card" class="h-6 w-6"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-semibold">Novo método</h2>
+          <p class="text-sm text-muted-foreground">Defina nome, percentual de desconto e estado inicial.</p>
+        </div>
+      </div>
+
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        {% for field in form %}
+          <div class="space-y-2">
+            <label for="{{ field.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+              {% if field.name == 'name' %}
+                <i data-lucide="tag" class="h-4 w-4 text-rose-400"></i>
+              {% elif field.name == 'discount_percentage' %}
+                <i data-lucide="percent" class="h-4 w-4 text-rose-400"></i>
+              {% elif field.name == 'is_active' %}
+                <i data-lucide="toggle-left" class="h-4 w-4 text-rose-400"></i>
+              {% else %}
+                <i data-lucide="file-text" class="h-4 w-4 text-rose-400"></i>
+              {% endif %}
+              <span>{{ field.label }}</span>
+            </label>
+            <div class="space-y-2">
+              {{ field }}
+              {% if field.help_text %}
+                <p class="text-xs text-muted-foreground">{{ field.help_text }}</p>
+              {% endif %}
+              {% if field.errors %}
+                <div class="text-red-400 text-sm flex items-center space-x-1">
+                  <i data-lucide="alert-circle" class="h-4 w-4"></i>
+                  <span>{{ field.errors.0 }}</span>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+
+        {% if form.non_field_errors %}
+          <div class="text-red-400 text-sm flex items-center space-x-1">
+            <i data-lucide="alert-octagon" class="h-4 w-4"></i>
+            <span>{{ form.non_field_errors.0 }}</span>
+          </div>
+        {% endif %}
+
+        <button type="submit" class="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+          <i data-lucide="save" class="h-4 w-4"></i>
+          <span>Cadastrar método</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="lg:col-span-2">
+    <div class="rounded-lg border border-border bg-card glass-effect">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div>
+          <h3 class="text-lg font-semibold">Métodos cadastrados</h3>
+          <p class="text-sm text-muted-foreground">Visualize o status, percentual de desconto e ative/desative rapidamente.</p>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Nome</th>
+              <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Desconto</th>
+              <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Status</th>
+              <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Atualizado em</th>
+              <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for method in payment_methods %}
+              <tr class="border-b border-border/80 transition-colors hover:bg-muted/40">
+                <td class="px-4 py-4">
+                  <div class="font-semibold text-foreground">{{ method.name }}</div>
+                  {% if method.description %}
+                    <p class="text-sm text-muted-foreground mt-1">{{ method.description }}</p>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-4">
+                  <span class="inline-flex items-center rounded-full bg-amber-500/20 px-3 py-1 text-sm font-medium text-amber-300">
+                    {{ method.discount_percentage|floatformat:2 }}%
+                  </span>
+                </td>
+                <td class="px-4 py-4">
+                  {% if method.is_active %}
+                    <span class="inline-flex items-center space-x-1 text-sm font-medium text-emerald-400">
+                      <i data-lucide="check-circle" class="h-4 w-4"></i>
+                      <span>Ativo</span>
+                    </span>
+                  {% else %}
+                    <span class="inline-flex items-center space-x-1 text-sm font-medium text-muted-foreground">
+                      <i data-lucide="pause-circle" class="h-4 w-4"></i>
+                      <span>Inativo</span>
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-4">
+                  <div class="text-sm text-muted-foreground">
+                    {{ method.updated_at|date:"d/m/Y" }} às {{ method.updated_at|time:"H:i" }}
+                  </div>
+                </td>
+                <td class="px-4 py-4">
+                  <form method="post" class="inline-flex" onsubmit="return confirm('Deseja realmente alterar o status deste método?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="toggle">
+                    <input type="hidden" name="payment_method_id" value="{{ method.id }}">
+                    <button type="submit" class="inline-flex items-center space-x-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+                      {% if method.is_active %}
+                        <i data-lucide="toggle-left" class="h-4 w-4"></i>
+                        <span>Desativar</span>
+                      {% else %}
+                        <i data-lucide="toggle-right" class="h-4 w-4"></i>
+                        <span>Ativar</span>
+                      {% endif %}
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5" class="px-6 py-12 text-center text-muted-foreground">
+                  <div class="flex flex-col items-center space-y-3">
+                    <div class="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                      <i data-lucide="credit-card" class="h-8 w-8 text-muted-foreground"></i>
+                    </div>
+                    <p>Ainda não há métodos cadastrados. Use o formulário ao lado para criar o primeiro.</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

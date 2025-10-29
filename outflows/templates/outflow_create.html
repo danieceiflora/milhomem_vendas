@@ -11,7 +11,7 @@ Cadastrar Venda
       <h1 class="text-3xl font-bold bg-gradient-to-r from-rose-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">
         Registrar Venda
       </h1>
-      <p class="text-muted-foreground mt-2">Informe o cliente e os produtos para registrar uma nova venda</p>
+      <p class="text-muted-foreground mt-2">Informe o cliente, a forma de pagamento e os itens vendidos</p>
     </div>
     <div class="flex items-center space-x-2">
       <div class="h-2 w-2 bg-rose-500 rounded-full animate-pulse"></div>
@@ -28,45 +28,119 @@ Cadastrar Venda
       </div>
       <div>
         <h2 class="text-2xl font-bold text-primary">Dados da Venda</h2>
-        <p class="text-muted-foreground">Selecione o cliente e adicione os produtos vendidos</p>
+        <p class="text-muted-foreground">Defina o cliente, a forma de pagamento e os produtos entregues</p>
       </div>
     </div>
 
     <form method="post" class="space-y-10" id="sale-form">
       {% csrf_token %}
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {% for field in form %}
+      <section class="space-y-4">
+        <div class="flex items-center space-x-3">
+          <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+            <i data-lucide="user" class="h-4 w-4"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold">Cliente</h3>
+            <p class="text-sm text-muted-foreground">Busque pelo nome, CPF ou telefone para selecionar o cliente da venda.</p>
+          </div>
+        </div>
+        {{ form.customer }}
+        <div class="space-y-3">
+          <div class="relative">
+            <input
+              type="text"
+              placeholder="Digite ao menos 2 caracteres para buscar"
+              class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              autocomplete="off"
+              autocapitalize="none"
+              data-customer-search
+            >
+            <div
+              class="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden"
+              data-customer-results
+            ></div>
+          </div>
+          <div
+            class="hidden items-center justify-between rounded-lg border border-primary/20 bg-primary/10 p-4"
+            data-customer-selected
+          >
+            <div>
+              <p class="font-medium text-foreground" data-customer-name></p>
+              <p class="text-sm text-muted-foreground" data-customer-details></p>
+            </div>
+            <button type="button" class="inline-flex items-center space-x-1 text-sm font-medium text-primary hover:text-primary/80" data-customer-clear>
+              <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+              <span>Mudar cliente</span>
+            </button>
+          </div>
+          <p class="text-xs text-muted-foreground">Os dados do cliente são obrigatórios para registrar a venda.</p>
+        </div>
+        {% if form.customer.errors %}
+          <div class="text-red-400 text-sm flex items-center space-x-1">
+            <i data-lucide="alert-circle" class="h-4 w-4"></i>
+            <span>{{ form.customer.errors.0 }}</span>
+          </div>
+        {% endif %}
+      </section>
+
+      <section class="space-y-4">
+        <div class="flex items-center space-x-3">
+          <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+            <i data-lucide="credit-card" class="h-4 w-4"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold">Forma de pagamento</h3>
+            <p class="text-sm text-muted-foreground">Escolha o método e visualize o desconto aplicado automaticamente.</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div class="space-y-2">
-            <label for="{{ field.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
-              {% if field.name == 'customer' %}
-                <i data-lucide="user" class="h-4 w-4 text-rose-400"></i>
-              {% else %}
-                <i data-lucide="file-text" class="h-4 w-4 text-rose-400"></i>
-              {% endif %}
-              <span>{{ field.label }}</span>
+            <label for="{{ form.payment_method.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+              <i data-lucide="wallet" class="h-4 w-4 text-primary"></i>
+              <span>{{ form.payment_method.label }}</span>
             </label>
-
-            {% if field.field.widget.input_type == 'textarea' %}
-              <textarea
-                name="{{ field.name }}"
-                id="{{ field.id_for_label }}"
-                rows="4"
-                class="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >{{ field.value|default:'' }}</textarea>
-            {% else %}
-              {{ field }}
-            {% endif %}
-
-            {% if field.errors %}
+            {{ form.payment_method }}
+            {% if form.payment_method.errors %}
               <div class="text-red-400 text-sm flex items-center space-x-1">
                 <i data-lucide="alert-circle" class="h-4 w-4"></i>
-                <span>{{ field.errors.0 }}</span>
+                <span>{{ form.payment_method.errors.0 }}</span>
               </div>
             {% endif %}
           </div>
-        {% endfor %}
-      </div>
+          <div class="rounded-lg border border-border/60 bg-secondary/30 p-4 space-y-2">
+            <div data-payment-empty class="text-sm text-muted-foreground">
+              Selecione uma forma de pagamento para visualizar o desconto aplicado ao valor final.
+            </div>
+            <div class="hidden space-y-1" data-payment-info>
+              <p class="text-sm font-medium text-foreground" data-payment-name></p>
+              <p class="text-sm text-muted-foreground">Desconto aplicado: <span data-payment-discount></span>%</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="space-y-4">
+        <div class="flex items-center space-x-3">
+          <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+            <i data-lucide="file-text" class="h-4 w-4"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold">Observações</h3>
+            <p class="text-sm text-muted-foreground">Descreva informações adicionais relevantes para esta venda (opcional).</p>
+          </div>
+        </div>
+        <div class="space-y-2">
+          <label for="{{ form.description.id_for_label }}" class="text-sm font-medium leading-none">{{ form.description.label }}</label>
+          {{ form.description }}
+          {% if form.description.errors %}
+            <div class="text-red-400 text-sm flex items-center space-x-1">
+              <i data-lucide="alert-circle" class="h-4 w-4"></i>
+              <span>{{ form.description.errors.0 }}</span>
+            </div>
+          {% endif %}
+        </div>
+      </section>
 
       {% if form.non_field_errors %}
         <div class="text-red-400 text-sm flex items-center space-x-1">
@@ -75,11 +149,11 @@ Cadastrar Venda
         </div>
       {% endif %}
 
-      <div>
-        <div class="flex items-center justify-between mb-4">
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-xl font-semibold">Produtos da Venda</h3>
-            <p class="text-muted-foreground text-sm">Informe os produtos vendidos e as quantidades</p>
+            <h3 class="text-xl font-semibold">Itens vendidos</h3>
+            <p class="text-sm text-muted-foreground">Pesquise pelo código interno, número de série ou nome para adicionar os produtos.</p>
           </div>
           <button type="button" id="add-item" class="inline-flex items-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200">
             <i data-lucide="plus" class="h-4 w-4"></i>
@@ -87,31 +161,30 @@ Cadastrar Venda
           </button>
         </div>
 
-        {{ formset.management_form }}
-        {% if formset.non_form_errors %}
+        {{ items_formset.management_form }}
+        {% if items_formset.non_form_errors %}
           <div class="mb-4 text-red-400 text-sm flex items-center space-x-1">
             <i data-lucide="alert-octagon" class="h-4 w-4"></i>
-            <span>{{ formset.non_form_errors.0 }}</span>
+            <span>{{ items_formset.non_form_errors.0 }}</span>
           </div>
         {% endif %}
 
         <div id="items-formset" class="space-y-4">
-          {% for item_form in formset.forms %}
+          {% for item_form in items_formset.forms %}
             {% include 'components/_outflow_item_form.html' with form=item_form %}
           {% endfor %}
         </div>
 
         <template id="item-form-template">
-          {% include 'components/_outflow_item_form.html' with form=formset.empty_form %}
+          {% include 'components/_outflow_item_form.html' with form=items_formset.empty_form %}
         </template>
-      </div>
+      </section>
 
       <div class="flex flex-wrap items-center justify-between pt-6 border-t border-border/40">
         <button type="submit" class="inline-flex items-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
           <i data-lucide="save" class="h-4 w-4"></i>
           <span>Registrar Venda</span>
         </button>
-
         <a href="{% url 'outflow_list' %}" class="inline-flex items-center space-x-2 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200">
           <i data-lucide="arrow-left" class="h-4 w-4"></i>
           <span>Cancelar</span>
@@ -121,6 +194,13 @@ Cadastrar Venda
   </div>
 </div>
 
+{% if payment_methods_data %}
+  {{ payment_methods_data|json_script:"payment-methods-data" }}
+{% endif %}
+{% if selected_customer %}
+  {{ selected_customer|json_script:"selected-customer-data" }}
+{% endif %}
+
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const addItemButton = document.getElementById('add-item');
@@ -128,8 +208,79 @@ Cadastrar Venda
     const totalFormsInput = document.getElementById('id_items-TOTAL_FORMS');
     const template = document.getElementById('item-form-template');
 
+    const paymentMethodsData = parseJsonScript('payment-methods-data') || [];
+    const initialSelectedCustomer = parseJsonScript('selected-customer-data');
+    const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    function parseJsonScript(id) {
+      const element = document.getElementById(id);
+      if (!element) {
+        return null;
+      }
+      try {
+        return JSON.parse(element.textContent);
+      } catch (error) {
+        console.error('Não foi possível interpretar o JSON de', id, error);
+        return null;
+      }
+    }
+
+    function renderLucide() {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }
+
+    function debounce(fn, delay) {
+      let timeout;
+      return (...args) => {
+        window.clearTimeout(timeout);
+        timeout = window.setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    function formatCpf(value) {
+      if (!value) {
+        return '';
+      }
+      const digits = String(value).replace(/\D/g, '');
+      if (digits.length !== 11) {
+        return value;
+      }
+      return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+    }
+
+    function formatPhone(value) {
+      if (!value) {
+        return '';
+      }
+      const digits = String(value).replace(/\D/g, '');
+      if (digits.length === 11) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+      }
+      if (digits.length === 10) {
+        return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+      }
+      return value;
+    }
+
+    function formatCurrency(value) {
+      if (value === null || value === undefined || value === '') {
+        return '';
+      }
+      const numeric = typeof value === 'number' ? value : parseFloat(value);
+      if (Number.isNaN(numeric)) {
+        return '';
+      }
+      return currencyFormatter.format(numeric);
+    }
+
     function initializeRemoveButtons(scope) {
-      scope.querySelectorAll('.remove-item').forEach(button => {
+      scope.querySelectorAll('.remove-item').forEach((button) => {
+        if (button.dataset.bound === 'true') {
+          return;
+        }
+        button.dataset.bound = 'true';
         button.addEventListener('click', () => {
           const formWrapper = button.closest('[data-form-prefix]');
           if (!formWrapper) {
@@ -144,21 +295,363 @@ Cadastrar Venda
       });
     }
 
-    addItemButton.addEventListener('click', () => {
-      const formCount = parseInt(totalFormsInput.value, 10);
-      const templateHtml = template.innerHTML.replace(/__prefix__/g, formCount);
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = templateHtml.trim();
-      const newForm = wrapper.firstChild;
-      formsetContainer.appendChild(newForm);
-      totalFormsInput.value = formCount + 1;
-      initializeRemoveButtons(newForm);
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-    });
+    function setupPaymentMethodSummary() {
+      const select = document.querySelector('[data-role="payment-method-select"]');
+      const container = document.querySelector('[data-payment-info]');
+      const nameElement = document.querySelector('[data-payment-name]');
+      const discountElement = document.querySelector('[data-payment-discount]');
+      const emptyState = document.querySelector('[data-payment-empty]');
 
+      if (!select || !container || !nameElement || !discountElement || !emptyState) {
+        return;
+      }
+
+      function updateSummary() {
+        const selectedId = select.value;
+        const method = paymentMethodsData.find((item) => String(item.id) === selectedId);
+        if (!method) {
+          container.classList.add('hidden');
+          emptyState.classList.remove('hidden');
+          return;
+        }
+
+        nameElement.textContent = method.name;
+        discountElement.textContent = typeof method.discount_percentage === 'string'
+          ? method.discount_percentage
+          : String(method.discount_percentage || 0);
+        emptyState.classList.add('hidden');
+        container.classList.remove('hidden');
+      }
+
+      select.addEventListener('change', updateSummary);
+      updateSummary();
+    }
+
+    function setupCustomerSearch(initialCustomer) {
+      const searchInput = document.querySelector('[data-customer-search]');
+      const resultsContainer = document.querySelector('[data-customer-results]');
+      const selectedContainer = document.querySelector('[data-customer-selected]');
+      const hiddenInput = document.getElementById('id_customer');
+      if (!searchInput || !resultsContainer || !hiddenInput) {
+        return;
+      }
+
+      const nameElement = selectedContainer ? selectedContainer.querySelector('[data-customer-name]') : null;
+      const detailsElement = selectedContainer ? selectedContainer.querySelector('[data-customer-details]') : null;
+      const clearButton = selectedContainer ? selectedContainer.querySelector('[data-customer-clear]') : null;
+
+      let lastTerm = '';
+      const fetchCustomers = debounce(async (term) => {
+        lastTerm = term;
+        try {
+          const response = await fetch(`/api/v1/customers/?search=${encodeURIComponent(term)}`, {
+            credentials: 'same-origin',
+          });
+          if (!response.ok) {
+            throw new Error('Falha ao buscar clientes');
+          }
+          const payload = await response.json();
+          if (lastTerm !== term) {
+            return;
+          }
+          const customers = Array.isArray(payload) ? payload : payload.results || [];
+          renderResults(customers);
+        } catch (error) {
+          console.error(error);
+          renderResults([]);
+        }
+      }, 300);
+
+      function renderResults(customers) {
+        resultsContainer.innerHTML = '';
+        if (!customers.length) {
+          resultsContainer.innerHTML = '<div class="px-4 py-3 text-sm text-muted-foreground">Nenhum cliente encontrado.</div>';
+          resultsContainer.classList.remove('hidden');
+          return;
+        }
+
+        customers.forEach((customer) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'flex w-full flex-col items-start space-y-1 rounded-md px-4 py-2 text-left hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
+          const cpfText = formatCpf(customer.cpf) || 'CPF não informado';
+          const phoneText = formatPhone(customer.phone) || 'Telefone não informado';
+          button.innerHTML = `
+            <span class="font-medium text-foreground">${customer.full_name}</span>
+            <span class="text-xs text-muted-foreground">${cpfText} · ${phoneText}</span>
+          `;
+          button.addEventListener('click', () => selectCustomer(customer));
+          resultsContainer.appendChild(button);
+        });
+        resultsContainer.classList.remove('hidden');
+      }
+
+      function selectCustomer(customer) {
+        hiddenInput.value = customer.id;
+        resultsContainer.classList.add('hidden');
+        searchInput.value = '';
+        if (selectedContainer && nameElement && detailsElement) {
+          nameElement.textContent = customer.full_name;
+          const cpfText = formatCpf(customer.cpf) || 'CPF não informado';
+          const phoneText = formatPhone(customer.phone) || 'Telefone não informado';
+          detailsElement.textContent = `${cpfText} · ${phoneText}`;
+          selectedContainer.classList.remove('hidden');
+        }
+        renderLucide();
+      }
+
+      if (clearButton) {
+        clearButton.addEventListener('click', () => {
+          hiddenInput.value = '';
+          if (selectedContainer) {
+            selectedContainer.classList.add('hidden');
+          }
+          if (nameElement) {
+            nameElement.textContent = '';
+          }
+          if (detailsElement) {
+            detailsElement.textContent = '';
+          }
+          searchInput.focus();
+        });
+      }
+
+      searchInput.addEventListener('input', (event) => {
+        const term = event.target.value.trim();
+        if (term.length < 2) {
+          resultsContainer.classList.add('hidden');
+          return;
+        }
+        fetchCustomers(term);
+      });
+
+      searchInput.addEventListener('focus', () => {
+        if (resultsContainer.children.length) {
+          resultsContainer.classList.remove('hidden');
+        }
+      });
+
+      searchInput.addEventListener('blur', () => {
+        window.setTimeout(() => resultsContainer.classList.add('hidden'), 200);
+      });
+
+      if (initialCustomer) {
+        selectCustomer({
+          id: initialCustomer.id,
+          full_name: initialCustomer.name,
+          cpf: initialCustomer.cpf,
+          phone: initialCustomer.phone,
+        });
+      } else if (!hiddenInput.value && selectedContainer) {
+        selectedContainer.classList.add('hidden');
+      }
+    }
+
+    async function loadProduct(productId) {
+      try {
+        const response = await fetch(`/api/v1/products/${productId}/`, {
+          credentials: 'same-origin',
+        });
+        if (!response.ok) {
+          throw new Error('Produto não encontrado');
+        }
+        return await response.json();
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }
+
+    function initializeProductSearch(scope) {
+      if (!scope) {
+        return;
+      }
+
+      const searchInput = scope.querySelector('[data-product-search]');
+      const resultsContainer = scope.querySelector('[data-product-results]');
+      const selectedContainer = scope.querySelector('[data-product-selected]');
+      const hiddenInput = scope.querySelector('input[type="hidden"][name$="-product"]');
+      if (!searchInput || !resultsContainer || !hiddenInput) {
+        return;
+      }
+
+      if (searchInput.dataset.bound === 'true') {
+        return;
+      }
+      searchInput.dataset.bound = 'true';
+
+      const nameElement = selectedContainer ? selectedContainer.querySelector('[data-product-name]') : null;
+      const codeElement = selectedContainer ? selectedContainer.querySelector('[data-product-code]') : null;
+      const stockElement = selectedContainer ? selectedContainer.querySelector('[data-product-stock]') : null;
+      const priceElement = selectedContainer ? selectedContainer.querySelector('[data-product-price]') : null;
+      const clearButton = selectedContainer ? selectedContainer.querySelector('[data-product-clear]') : null;
+  const quantityInput = scope.querySelector('input[name$="-quantity"]');
+  const unitPriceInput = scope.querySelector('input[name$="-unit_price"]');
+  const deleteInput = scope.querySelector('input[name$="-DELETE"]');
+  const helperText = scope.querySelector('[data-product-helper]');
+
+      if (deleteInput && deleteInput.value === 'on') {
+        scope.classList.add('hidden');
+      }
+
+      let lastTerm = '';
+      const fetchProducts = debounce(async (term) => {
+        lastTerm = term;
+        try {
+          const response = await fetch(`/api/v1/products/?search=${encodeURIComponent(term)}`, {
+            credentials: 'same-origin',
+          });
+          if (!response.ok) {
+            throw new Error('Falha ao buscar produtos');
+          }
+          const payload = await response.json();
+          if (lastTerm !== term) {
+            return;
+          }
+          const products = Array.isArray(payload) ? payload : payload.results || [];
+          renderResults(products);
+        } catch (error) {
+          console.error(error);
+          renderResults([]);
+        }
+      }, 300);
+
+      function renderResults(products) {
+        resultsContainer.innerHTML = '';
+        if (!products.length) {
+          resultsContainer.innerHTML = '<div class="px-4 py-3 text-sm text-muted-foreground">Nenhum produto encontrado.</div>';
+          resultsContainer.classList.remove('hidden');
+          return;
+        }
+
+        products.forEach((product) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'flex w-full flex-col items-start space-y-1 rounded-md px-4 py-2 text-left hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
+          const seriePart = product.serie_number ? ` · Série: ${product.serie_number}` : '';
+          const priceText = product.selling_price ? formatCurrency(product.selling_price) : 'Sem preço cadastrado';
+          button.innerHTML = `
+            <span class="font-medium text-foreground">${product.title}</span>
+            <span class="text-xs text-muted-foreground">Código: ${product.id}${seriePart}</span>
+            <span class="text-xs text-muted-foreground">Estoque: ${product.quantity} · ${priceText}</span>
+          `;
+          button.addEventListener('click', () => selectProduct(product));
+          resultsContainer.appendChild(button);
+        });
+        resultsContainer.classList.remove('hidden');
+      }
+
+      function selectProduct(product) {
+        hiddenInput.value = product.id;
+        resultsContainer.classList.add('hidden');
+        searchInput.value = '';
+
+        if (selectedContainer && nameElement && codeElement && stockElement && priceElement) {
+          nameElement.textContent = product.title;
+          const details = [`Código: ${product.id}`];
+          if (product.serie_number) {
+            details.push(`Série: ${product.serie_number}`);
+          }
+          codeElement.textContent = details.join(' · ');
+          stockElement.textContent = `Estoque disponível: ${product.quantity}`;
+          priceElement.textContent = formatCurrency(product.selling_price);
+          selectedContainer.classList.remove('hidden');
+        }
+
+        if (helperText) {
+          helperText.classList.add('hidden');
+        }
+
+        if (quantityInput && !quantityInput.value) {
+          quantityInput.value = 1;
+        }
+
+        if (unitPriceInput && !unitPriceInput.value) {
+          unitPriceInput.value = product.selling_price || '';
+        }
+        renderLucide();
+      }
+
+      if (clearButton) {
+        clearButton.addEventListener('click', () => {
+          hiddenInput.value = '';
+          if (selectedContainer) {
+            selectedContainer.classList.add('hidden');
+          }
+          if (helperText) {
+            helperText.classList.remove('hidden');
+          }
+          if (nameElement) {
+            nameElement.textContent = '';
+          }
+          if (codeElement) {
+            codeElement.textContent = '';
+          }
+          if (stockElement) {
+            stockElement.textContent = '';
+          }
+          if (priceElement) {
+            priceElement.textContent = '';
+          }
+          searchInput.focus();
+        });
+      }
+
+      searchInput.addEventListener('input', (event) => {
+        const term = event.target.value.trim();
+        if (term.length < 2) {
+          resultsContainer.classList.add('hidden');
+          return;
+        }
+        fetchProducts(term);
+      });
+
+      searchInput.addEventListener('focus', () => {
+        if (resultsContainer.children.length) {
+          resultsContainer.classList.remove('hidden');
+        }
+      });
+
+      searchInput.addEventListener('blur', () => {
+        window.setTimeout(() => resultsContainer.classList.add('hidden'), 200);
+      });
+
+      if (hiddenInput.value) {
+        loadProduct(hiddenInput.value).then((product) => {
+          if (product) {
+            selectProduct(product);
+          }
+        });
+      } else if (selectedContainer) {
+        selectedContainer.classList.add('hidden');
+        if (helperText) {
+          helperText.classList.remove('hidden');
+        }
+      }
+    }
+
+    if (addItemButton) {
+      addItemButton.addEventListener('click', () => {
+        const formCount = parseInt(totalFormsInput.value, 10);
+        const templateHtml = template.innerHTML.replace(/__prefix__/g, formCount);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = templateHtml.trim();
+        const newForm = wrapper.firstElementChild;
+        formsetContainer.appendChild(newForm);
+        totalFormsInput.value = formCount + 1;
+        initializeRemoveButtons(newForm);
+        initializeProductSearch(newForm);
+        renderLucide();
+      });
+    }
+
+    setupPaymentMethodSummary();
+    setupCustomerSearch(initialSelectedCustomer);
     initializeRemoveButtons(formsetContainer);
+    formsetContainer.querySelectorAll('[data-form-prefix]').forEach((formWrapper) => {
+      initializeProductSearch(formWrapper);
+    });
+    renderLucide();
   });
 </script>
 

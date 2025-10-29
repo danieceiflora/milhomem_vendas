@@ -1,4 +1,8 @@
-from rest_framework import generics
+import re
+from django.db.models import Q
+from rest_framework import generics, permissions
+from rest_framework.authentication import SessionAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
@@ -72,10 +76,33 @@ class ProductDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView)
 
 
 class ProductCreateListAPIView(generics.ListCreateAPIView):
-    queryset = models.Product.objects.all()
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
+    permission_classes = (permissions.IsAuthenticated,)
     serializer_class = serializers.ProductSerializer
+
+    def get_queryset(self):
+        queryset = models.Product.objects.all()
+        search = self.request.query_params.get('search')
+
+        if search:
+            search = search.strip()
+            numeric = re.sub(r'\D', '', search)
+            query = Q(title__icontains=search) | Q(serie_number__icontains=search)
+
+            if numeric:
+                query |= Q(serie_number__icontains=numeric)
+                try:
+                    query |= Q(pk=int(numeric))
+                except ValueError:
+                    pass
+
+            queryset = queryset.filter(query)
+
+        return queryset.order_by('title')[:10]
 
 
 class ProductRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = (SessionAuthentication, JWTAuthentication)
+    permission_classes = (permissions.IsAuthenticated,)
     queryset = models.Product.objects.all()
     serializer_class = serializers.ProductSerializer

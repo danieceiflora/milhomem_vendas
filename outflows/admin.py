@@ -8,12 +8,26 @@ class OutflowItemInline(admin.TabularInline):
     readonly_fields = ('unit_price', 'unit_cost')
 
 
+class OutflowReturnItemInline(admin.TabularInline):
+    model = models.OutflowReturnItem
+    extra = 0
+    readonly_fields = ('product', 'unit_price', 'unit_cost')
+
+
 @admin.register(models.Outflow)
 class OutflowAdmin(admin.ModelAdmin):
-    list_display = ('id', 'customer', 'total_items', 'total_amount', 'created_at')
-    list_filter = ('created_at', 'customer')
+    list_display = (
+        'id',
+        'customer',
+        'operation_type',
+        'payment_method',
+        'total_items',
+        'final_amount',
+        'created_at',
+    )
+    list_filter = ('operation_type', 'payment_method', 'created_at', 'customer')
     search_fields = ('customer__full_name', 'items__product__title')
-    inlines = [OutflowItemInline]
+    inlines = [OutflowItemInline, OutflowReturnItemInline]
 
 
 @admin.register(models.OutflowItem)
@@ -21,3 +35,17 @@ class OutflowItemAdmin(admin.ModelAdmin):
     list_display = ('outflow', 'product', 'quantity', 'unit_price', 'created_at')
     list_filter = ('product',)
     search_fields = ('product__title', 'outflow__customer__full_name')
+
+
+@admin.register(models.OutflowReturnItem)
+class OutflowReturnItemAdmin(admin.ModelAdmin):
+    list_display = ('outflow', 'product', 'quantity', 'unit_price', 'created_at')
+    list_filter = ('product',)
+    search_fields = ('product__title', 'outflow__customer__full_name')
+
+
+@admin.register(models.PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'discount_percentage', 'is_active', 'updated_at')
+    list_filter = ('is_active',)
+    search_fields = ('name',)

@@ -5,7 +5,7 @@
     <div class="relative">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-muted-foreground">Quantidade de Vendas</p>
+          <p class="text-sm font-medium text-muted-foreground">Operações registradas</p>
           <p class="text-3xl font-bold text-foreground">{{ sales_metrics.total_sales }}</p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-500/20">
@@ -14,7 +14,7 @@
       </div>
       <div class="mt-4 flex items-center text-sm">
         <i data-lucide="activity" class="mr-1 h-4 w-4 text-indigo-400"></i>
-        <span class="text-indigo-400 font-medium">Total de vendas</span>
+  <span class="text-indigo-400 font-medium">Vendas, devoluções e trocas</span>
       </div>
     </div>
   </div>
@@ -25,7 +25,7 @@
     <div class="relative">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-muted-foreground">Produtos Vendidos</p>
+          <p class="text-sm font-medium text-muted-foreground">Itens entregues (líquido)</p>
           <p class="text-3xl font-bold text-foreground">{{ sales_metrics.total_products_sold }}</p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-purple-500/20">
@@ -34,7 +34,7 @@
       </div>
       <div class="mt-4 flex items-center text-sm">
         <i data-lucide="box" class="mr-1 h-4 w-4 text-purple-400"></i>
-        <span class="text-purple-400 font-medium">Unidades vendidas</span>
+  <span class="text-purple-400 font-medium">Devolvidos: {{ sales_metrics.total_products_returned }}</span>
       </div>
     </div>
   </div>
@@ -45,7 +45,7 @@
     <div class="relative">
       <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm font-medium text-muted-foreground">Valor das Vendas</p>
+          <p class="text-sm font-medium text-muted-foreground">Valor bruto</p>
           <p class="text-3xl font-bold text-foreground">R$ {{ sales_metrics.total_sales_value }}</p>
         </div>
         <div class="flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/20">
@@ -54,7 +54,7 @@
       </div>
       <div class="mt-4 flex items-center text-sm">
         <i data-lucide="trending-up" class="mr-1 h-4 w-4 text-emerald-400"></i>
-        <span class="text-emerald-400 font-medium">Receita total</span>
+  <span class="text-emerald-400 font-medium">Receita líquida: R$ {{ sales_metrics.total_sales_final_value }}</span>
       </div>
     </div>
   </div>

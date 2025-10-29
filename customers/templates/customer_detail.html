@@ -37,12 +37,7 @@ Detalhes do Cliente - {{ object.full_name }}
             <span>Editar</span>
           </a>
         {% endif %}
-        {% if perms.customers.delete_customer %}
-          <a href="{% url 'customer_delete' object.id %}" class="inline-flex items-center space-x-2 bg-destructive hover:bg-destructive/80 text-destructive-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200">
-            <i data-lucide="trash-2" class="h-4 w-4"></i>
-            <span>Excluir</span>
-          </a>
-        {% endif %}
+        
       </div>
     </div>
 
