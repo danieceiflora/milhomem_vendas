@@ -60,6 +60,7 @@ def add_item(sale: Sale, product_id: int, quantity: int) -> SaleItem:
     """
     Adiciona um item à venda ou atualiza a quantidade se já existir.
     Recalcula os totais automaticamente.
+    Valida estoque disponível.
     """
     if quantity < 1:
         raise ValueError("Quantidade deve ser maior que zero")
@@ -69,11 +70,22 @@ def add_item(sale: Sale, product_id: int, quantity: int) -> SaleItem:
     except Product.DoesNotExist:
         raise ValueError(f"Produto {product_id} não encontrado")
     
+    # Validação de estoque
+    if product.quantity <= 0:
+        raise ValueError(f"Produto '{product.title}' está sem estoque disponível")
+    
     # Verifica se o item já existe na venda
     item = sale.items.filter(product=product).first()
+    new_quantity = quantity if not item else item.quantity + quantity
+    
+    if new_quantity > product.quantity:
+        raise ValueError(
+            f"Quantidade solicitada ({new_quantity}) excede o estoque disponível ({product.quantity}) "
+            f"para o produto '{product.title}'"
+        )
     
     if item:
-        item.quantity += quantity
+        item.quantity = new_quantity
         item.save()
     else:
         item = SaleItem.objects.create(
@@ -93,6 +105,7 @@ def update_item(sale: Sale, item_id: int, quantity: int) -> SaleItem:
     """
     Atualiza a quantidade de um item específico.
     Remove o item se quantidade for 0.
+    Valida estoque disponível.
     """
     if quantity < 0:
         raise ValueError("Quantidade não pode ser negativa")
@@ -101,6 +114,13 @@ def update_item(sale: Sale, item_id: int, quantity: int) -> SaleItem:
         item = sale.items.get(pk=item_id)
     except SaleItem.DoesNotExist:
         raise ValueError(f"Item {item_id} não encontrado")
+    
+    # Validação de estoque ao atualizar
+    if quantity > 0 and quantity > item.product.quantity:
+        raise ValueError(
+            f"Quantidade solicitada ({quantity}) excede o estoque disponível ({item.product.quantity}) "
+            f"para o produto '{item.product.title}'"
+        )
     
     if quantity == 0:
         item.delete()
@@ -255,6 +275,28 @@ def finalize_sale(sale: Sale, resolution: Optional[str] = None) -> Dict[str, Any
     
     if not sale.items.exists():
         raise ValueError("Não é possível finalizar venda sem itens")
+    
+    # Validação de estoque antes de finalizar
+    items_without_stock = []
+    items_exceeding_stock = []
+    
+    for item in sale.items.select_related('product'):
+        if item.product.quantity <= 0:
+            items_without_stock.append(item.product.title)
+        elif item.quantity > item.product.quantity:
+            items_exceeding_stock.append(
+                f"{item.product.title} (solicitado: {item.quantity}, disponível: {item.product.quantity})"
+            )
+    
+    if items_without_stock:
+        raise ValueError(
+            f"Não é possível finalizar a venda. Os seguintes produtos estão sem estoque: {', '.join(items_without_stock)}"
+        )
+    
+    if items_exceeding_stock:
+        raise ValueError(
+            f"Não é possível finalizar a venda. Quantidades excedem estoque disponível: {', '.join(items_exceeding_stock)}"
+        )
     
     # Recalcula para garantir consistência
     recalc_totals(sale)

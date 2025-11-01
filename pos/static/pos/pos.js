@@ -409,24 +409,37 @@ document.addEventListener('DOMContentLoaded', function() {
       if (products.length === 0) {
         productResults.innerHTML = '<div class="px-4 py-3 text-sm text-muted-foreground">Nenhum produto encontrado.</div>';
       } else {
-        productResults.innerHTML = products.map(product => `
-          <button
-            type="button"
-            class="flex w-full flex-col items-start space-y-1 rounded-md px-4 py-2 text-left hover:bg-primary/10"
-            data-select-product='${JSON.stringify(product)}'
-          >
-            <span class="font-medium">${product.title}</span>
-            <span class="text-xs text-muted-foreground">Cód: ${product.id} | Estoque: ${product.quantity}</span>
-            <span class="text-xs font-medium text-green-500">${formatCurrency(product.selling_price)}</span>
-          </button>
-        `).join('');
+        productResults.innerHTML = products.map(product => {
+          const hasStock = product.quantity > 0;
+          const stockClass = hasStock ? 'hover:bg-primary/10 cursor-pointer' : 'bg-red-500/10 cursor-not-allowed opacity-60';
+          const stockBadge = hasStock 
+            ? `<span class="text-xs text-green-500">Estoque: ${product.quantity}</span>`
+            : `<span class="text-xs text-red-500 font-semibold">⚠️ SEM ESTOQUE</span>`;
+          
+          return `
+            <button
+              type="button"
+              class="flex w-full flex-col items-start space-y-1 rounded-md px-4 py-2 text-left ${stockClass}"
+              data-select-product='${JSON.stringify(product)}'
+              ${!hasStock ? 'disabled' : ''}
+            >
+              <span class="font-medium ${!hasStock ? 'text-muted-foreground' : ''}">${product.title}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-muted-foreground">Cód: ${product.id}</span>
+                ${stockBadge}
+              </div>
+              <span class="text-xs font-medium ${!hasStock ? 'text-muted-foreground' : 'text-green-500'}">${formatCurrency(product.selling_price)}</span>
+            </button>
+          `;
+        }).join('');
         
-        productResults.querySelectorAll('[data-select-product]').forEach(btn => {
+        productResults.querySelectorAll('[data-select-product]:not([disabled])').forEach(btn => {
           btn.addEventListener('click', () => {
             selectedProduct = JSON.parse(btn.dataset.selectProduct);
             productSearch.value = selectedProduct.title;
             productResults.classList.add('hidden');
             addProductBtn.disabled = false;
+            productQuantity.max = selectedProduct.quantity; // Define quantidade máxima
             productQuantity.focus();
           });
         });
@@ -455,6 +468,24 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!selectedProduct) return;
     
     const quantity = parseInt(productQuantity.value, 10) || 1;
+    
+    // Validação de estoque
+    if (selectedProduct.quantity <= 0) {
+      alert('❌ Este produto está sem estoque disponível.');
+      return;
+    }
+    
+    if (quantity > selectedProduct.quantity) {
+      alert(`❌ Quantidade solicitada (${quantity}) excede o estoque disponível (${selectedProduct.quantity}).`);
+      productQuantity.value = selectedProduct.quantity;
+      return;
+    }
+    
+    if (quantity <= 0) {
+      alert('❌ A quantidade deve ser maior que zero.');
+      productQuantity.value = 1;
+      return;
+    }
     
     try {
       const result = await apiCall('/pos/add-item/', {
