@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Lançamentos - Créditos e Débitos{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-green-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+        Lançamentos
+      </h1>
+      <p class="text-muted-foreground mt-2">Créditos e débitos de clientes</p>
+    </div>
+  </div>
+</div>
+
+<div class="rounded-lg border border-border bg-card p-6 mb-6">
+  <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <label class="text-sm font-medium mb-2 block">Tipo</label>
+      <select name="type" class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+        <option value="">Todos</option>
+        <option value="credit" {% if request.GET.type == 'credit' %}selected{% endif %}>Crédito</option>
+        <option value="debit" {% if request.GET.type == 'debit' %}selected{% endif %}>Débito</option>
+      </select>
+    </div>
+    
+    <div>
+      <label class="text-sm font-medium mb-2 block">Status</label>
+      <select name="status" class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+        <option value="">Todos</option>
+        <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Em aberto</option>
+        <option value="settled" {% if request.GET.status == 'settled' %}selected{% endif %}>Liquidado</option>
+        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelado</option>
+      </select>
+    </div>
+    
+    <div class="md:col-span-2 flex items-end">
+      <button type="submit" class="inline-flex items-center space-x-2 bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-lg font-medium h-11">
+        <i data-lucide="filter" class="h-4 w-4"></i>
+        <span>Filtrar</span>
+      </button>
+    </div>
+  </form>
+</div>
+
+<div class="rounded-lg border border-border bg-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-muted/50">
+        <tr>
+          <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Cliente</th>
+          <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tipo</th>
+          <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+          <th class="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
+          <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Descrição</th>
+          <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr class="border-b border-border/50 hover:bg-muted/30">
+          <td class="py-3 px-4">
+            <div class="font-medium">{{ entry.customer.full_name }}</div>
+            {% if entry.customer.is_generic %}
+            <div class="text-xs text-orange-500">Cliente genérico</div>
+            {% endif %}
+          </td>
+          <td class="py-3 px-4">
+            {% if entry.type == 'credit' %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-500">
+              Crédito
+            </span>
+            {% else %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-500">
+              Débito
+            </span>
+            {% endif %}
+          </td>
+          <td class="py-3 px-4">
+            {% if entry.status == 'open' %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-500">
+              Em aberto
+            </span>
+            {% elif entry.status == 'settled' %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-500">
+              Liquidado
+            </span>
+            {% else %}
+            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-500">
+              Cancelado
+            </span>
+            {% endif %}
+          </td>
+          <td class="py-3 px-4 text-right font-medium">R$ {{ entry.amount }}</td>
+          <td class="py-3 px-4 text-sm text-muted-foreground">{{ entry.description|default:"—" }}</td>
+          <td class="py-3 px-4 text-sm text-muted-foreground">{{ entry.created_at|date:"d/m/Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="py-12 text-center text-muted-foreground">
+            <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50"></i>
+            <p>Nenhum lançamento encontrado</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}
+<div class="flex items-center justify-between mt-6">
+  <div class="text-sm text-muted-foreground">
+    Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+  </div>
+  <div class="flex space-x-2">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+      Anterior
+    </a>
+    {% endif %}
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-secondary-foreground">
+      Próxima
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+</script>
+{% endblock %}

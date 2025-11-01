@@ -32,8 +32,7 @@ class Customer(models.Model):
     state = models.CharField('Estado', max_length=2, blank=True)
     
     # Campos de controle
-    
-    # Campos de controle
+    is_generic = models.BooleanField('Cliente genérico', default=False, help_text='Indica se é o cliente genérico usado no PDV')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

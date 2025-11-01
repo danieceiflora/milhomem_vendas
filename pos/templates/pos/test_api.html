@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de API</title>
+</head>
+<body>
+    <h1>Teste de APIs do PDV</h1>
+    
+    <h2>Teste de Clientes</h2>
+    <input type="text" id="customer-search" placeholder="Digite para buscar cliente">
+    <div id="customer-results"></div>
+    
+    <h2>Teste de Produtos</h2>
+    <input type="text" id="product-search" placeholder="Digite para buscar produto">
+    <div id="product-results"></div>
+    
+    <script>
+        // Teste de busca de clientes
+        document.getElementById('customer-search').addEventListener('input', async (e) => {
+            const term = e.target.value;
+            if (term.length < 2) return;
+            
+            try {
+                const response = await fetch(`/api/v1/customers/?search=${encodeURIComponent(term)}`);
+                const data = await response.json();
+                console.log('Clientes:', data);
+                
+                const customers = Array.isArray(data) ? data : data.results || [];
+                document.getElementById('customer-results').innerHTML = 
+                    `<pre>${JSON.stringify(customers, null, 2)}</pre>`;
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('customer-results').innerHTML = 
+                    `<p style="color: red">Erro: ${error.message}</p>`;
+            }
+        });
+        
+        // Teste de busca de produtos
+        document.getElementById('product-search').addEventListener('input', async (e) => {
+            const term = e.target.value;
+            if (term.length < 2) return;
+            
+            try {
+                const response = await fetch(`/api/v1/products/?search=${encodeURIComponent(term)}`);
+                const data = await response.json();
+                console.log('Produtos:', data);
+                
+                const products = Array.isArray(data) ? data : data.results || [];
+                document.getElementById('product-results').innerHTML = 
+                    `<pre>${JSON.stringify(products, null, 2)}</pre>`;
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('product-results').innerHTML = 
+                    `<p style="color: red">Erro: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

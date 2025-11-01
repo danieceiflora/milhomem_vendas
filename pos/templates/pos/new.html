@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}PDV - Ponto de Venda{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+        PDV - Ponto de Venda
+      </h1>
+      <p class="text-muted-foreground mt-2">Sistema de vendas com múltiplos pagamentos</p>
+    </div>
+    <div class="flex items-center space-x-2">
+      <div class="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
+      <span class="text-sm text-muted-foreground">Venda #{{ sale.id }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Coluna Esquerda: Produtos e Itens -->
+  <div class="lg:col-span-2 space-y-6">
+    <!-- Seleção de Cliente -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+          <i data-lucide="user" class="h-4 w-4"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold">Cliente</h3>
+          <p class="text-sm text-muted-foreground">Selecione o cliente para esta venda</p>
+        </div>
+      </div>
+      
+      <div class="space-y-3">
+        <div class="relative">
+          <input
+            type="text"
+            placeholder="Buscar cliente (nome, CPF ou telefone)..."
+            class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            autocomplete="off"
+            data-customer-search
+          >
+          <div
+            class="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden z-10"
+            data-customer-results
+          ></div>
+        </div>
+        <div
+          class="items-center justify-between rounded-lg border border-primary/20 bg-primary/10 p-4"
+          data-customer-selected
+        >
+          <div>
+            <p class="font-medium text-foreground" data-customer-name>{{ sale.customer.full_name }}</p>
+            <p class="text-sm text-muted-foreground" data-customer-details>
+              {% if sale.customer.is_generic %}Cliente genérico{% else %}{{ sale.customer.formatted_phone }}{% endif %}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adicionar Produto -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+          <i data-lucide="package" class="h-4 w-4"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold">Adicionar Produto</h3>
+          <p class="text-sm text-muted-foreground">Busque e adicione produtos à venda</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="relative">
+          <input
+            type="text"
+            placeholder="Buscar produto (código, série ou nome)..."
+            class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            autocomplete="off"
+            data-product-search
+          >
+          <div
+            class="absolute left-0 right-0 mt-2 max-h-64 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden z-10"
+            data-product-results
+          ></div>
+        </div>
+        <div class="flex space-x-2">
+          <input
+            type="number"
+            min="1"
+            value="1"
+            placeholder="Qtd"
+            class="flex h-11 w-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
+            data-product-quantity
+          >
+          <button
+            type="button"
+            class="flex-1 inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            data-add-product-btn
+            disabled
+          >
+            <i data-lucide="plus" class="h-4 w-4"></i>
+            <span>Adicionar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de Itens -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center space-x-3">
+          <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+            <i data-lucide="shopping-cart" class="h-4 w-4"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold">Itens da Venda</h3>
+            <p class="text-sm text-muted-foreground">Lista de produtos</p>
+          </div>
+        </div>
+        <span class="text-sm text-muted-foreground" data-items-count>0 itens</span>
+      </div>
+
+      <div data-items-container>
+        {% include 'pos/components/_items_table.html' %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Coluna Direita: Pagamentos e Resumo -->
+  <div class="space-y-6">
+    <!-- Pagamentos -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+          <i data-lucide="credit-card" class="h-4 w-4"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold">Pagamentos</h3>
+          <p class="text-sm text-muted-foreground">Adicione formas de pagamento</p>
+        </div>
+      </div>
+
+      <div class="space-y-3 mb-4">
+        <select
+          class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          data-payment-method-select
+        >
+          <option value="">Selecione o método</option>
+          {% for pm in payment_methods %}
+          <option value="{{ pm.id }}" data-name="{{ pm.name }}">{{ pm.name }}</option>
+          {% endfor %}
+        </select>
+
+        <div data-cash-fields class="hidden space-y-2">
+          <label class="text-sm font-medium">Valor recebido</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0,00"
+            class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            data-cash-tendered
+          >
+          <p class="text-xs text-muted-foreground">Troco será calculado automaticamente</p>
+        </div>
+
+        <div data-other-fields class="hidden space-y-2">
+          <label class="text-sm font-medium">Valor do pagamento</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0,00"
+            class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            data-payment-amount
+          >
+        </div>
+
+        <button
+          type="button"
+          class="w-full inline-flex items-center justify-center space-x-2 bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50"
+          data-add-payment-btn
+          disabled
+        >
+          <i data-lucide="plus" class="h-4 w-4"></i>
+          <span>Adicionar Pagamento</span>
+        </button>
+      </div>
+
+      <div data-payments-container>
+        {% include 'pos/components/_payments_table.html' %}
+      </div>
+    </div>
+
+    <!-- Resumo -->
+    <div class="rounded-lg border border-border bg-gradient-to-br from-primary/10 to-secondary/10 p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+          <i data-lucide="calculator" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Resumo</h3>
+      </div>
+
+      {% include 'pos/components/_summary.html' %}
+
+      <button
+        type="button"
+        class="w-full mt-4 inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50"
+        data-finalize-btn
+      >
+        <i data-lucide="check" class="h-5 w-5"></i>
+        <span>Finalizar Venda</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Resolução de Diferença -->
+<div id="diff-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" data-diff-modal>
+  <div class="bg-card rounded-lg p-6 max-w-md w-full mx-4">
+    <h3 class="text-xl font-bold mb-4">Diferença de Pagamento</h3>
+    <p class="text-muted-foreground mb-6" data-diff-message></p>
+    <div class="space-y-3" data-diff-options></div>
+    <button
+      type="button"
+      class="w-full mt-4 bg-secondary hover:bg-secondary/80 text-secondary-foreground px-4 py-2 rounded-lg font-medium"
+      data-diff-cancel
+    >
+      Cancelar
+    </button>
+  </div>
+</div>
+
+<!-- Modal de Sucesso -->
+<div id="success-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" data-success-modal>
+  <div class="bg-card rounded-lg p-6 max-w-md w-full mx-4 text-center">
+    <div class="h-16 w-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+      <i data-lucide="check-circle" class="h-8 w-8 text-green-500"></i>
+    </div>
+    <h3 class="text-xl font-bold mb-2">Venda Finalizada!</h3>
+    <p class="text-muted-foreground mb-6">A venda foi registrada com sucesso.</p>
+    <button
+      type="button"
+      class="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium"
+      onclick="window.location.reload()"
+    >
+      Nova Venda
+    </button>
+  </div>
+</div>
+
+{{ sale_data|json_script:"sale-data" }}
+{{ payment_methods_data|json_script:"payment-methods-data" }}
+
+<script src="{% static 'pos/pos.js' %}"></script>
+{% endblock %}

@@ -26,4 +26,6 @@ urlpatterns = [
     path('', include('inflows.urls')),
     path('', include('customers.urls')),
     path('', include('outflows.urls')),
+    path('pos/', include('pos.urls')),
 ]
+

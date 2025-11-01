@@ -1,0 +1,9 @@
+{% if sale_data.payments %}
+<div class="space-y-2" data-payments-list>
+  <!-- Preenchido via JavaScript -->
+</div>
+{% else %}
+<div class="text-center py-4 text-muted-foreground">
+  <p class="text-sm">Nenhum pagamento adicionado</p>
+</div>
+{% endif %}

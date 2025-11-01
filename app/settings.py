@@ -28,7 +28,7 @@ ENVIRONMENT = os.getenv('DJANGO_ENV', 'dev')
 SECRET_KEY = os.getenv('SECRET_KEY', 'unsafe-default-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 allowed_hosts_env = os.getenv('ALLOWED_HOSTS', '')
 ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(',') if host.strip()]
@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'customers',
     'outflows',
     'ai',
+    'pos',
 ]
 
 LOGIN_URL = 'login'
@@ -156,6 +157,12 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Diretórios adicionais para arquivos estáticos (em desenvolvimento)
+STATICFILES_DIRS = []
+
+# Diretório onde collectstatic vai copiar os arquivos (para produção)
+STATIC_ROOT = BASE_DIR.parent / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

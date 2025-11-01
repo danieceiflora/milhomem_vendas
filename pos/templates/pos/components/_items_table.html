@@ -1,0 +1,23 @@
+{% if sale_data.items %}
+<div class="overflow-x-auto">
+  <table class="w-full">
+    <thead>
+      <tr class="border-b border-border">
+        <th class="text-left py-2 px-2 text-sm font-medium text-muted-foreground">Produto</th>
+        <th class="text-center py-2 px-2 text-sm font-medium text-muted-foreground w-24">Qtd</th>
+        <th class="text-right py-2 px-2 text-sm font-medium text-muted-foreground w-28">Preço</th>
+        <th class="text-right py-2 px-2 text-sm font-medium text-muted-foreground w-28">Total</th>
+        <th class="w-12"></th>
+      </tr>
+    </thead>
+    <tbody data-items-body>
+      <!-- Preenchido via JavaScript -->
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="text-center py-8 text-muted-foreground">
+  <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50"></i>
+  <p class="text-sm">Nenhum item adicionado</p>
+</div>
+{% endif %}
