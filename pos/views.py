@@ -1,7 +1,8 @@
 from decimal import Decimal
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.views import View
 from django.views.generic import ListView
 from django.http import JsonResponse
@@ -9,15 +10,14 @@ from django.db.models import Q
 from django.views.decorators.http import require_http_methods
 import json
 
-from . import services
-from .models import Sale, SaleItem, SalePayment, LedgerEntry
+from . import services, forms
+from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
 from .serializers import (
     SaleSerializer, SaleItemSerializer, SalePaymentSerializer,
     LedgerEntrySerializer
 )
 from customers.models import Customer
 from products.models import Product
-from outflows.models import PaymentMethod
 
 
 class POSNewView(LoginRequiredMixin, View):
@@ -45,7 +45,10 @@ class POSNewView(LoginRequiredMixin, View):
             {
                 'id': pm.id,
                 'name': pm.name,
-                'discount_percentage': str(pm.discount_percentage)
+                'fee_percentage': str(pm.fee_percentage),
+                'fee_payer': pm.fee_payer,
+                'discount_percentage': str(pm.discount_percentage),  # Para compatibilidade
+                'charge_percentage': str(pm.charge_percentage),  # Novo: acréscimo
             }
             for pm in payment_methods
         ]
@@ -306,3 +309,153 @@ def reassign_ledger_view(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': 'Erro ao reatribuir lançamento'}, status=500)
+
+
+class SaleListView(LoginRequiredMixin, ListView):
+    """Lista todas as vendas finalizadas."""
+    model = Sale
+    template_name = 'pos/sale_list.html'
+    context_object_name = 'sales'
+    paginate_by = 20
+    ordering = ['-finalized_at', '-created_at']
+    
+    def get_queryset(self):
+        queryset = Sale.objects.filter(
+            status=Sale.Status.FINALIZED
+        ).select_related(
+            'customer', 'user'
+        ).prefetch_related(
+            'items__product', 'payments__payment_method'
+        )
+        
+        # Filtros
+        search = self.request.GET.get('search', '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(id__icontains=search) |
+                Q(customer__full_name__icontains=search) |
+                Q(customer__phone__icontains=search)
+            )
+        
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        date_from = self.request.GET.get('date_from')
+        if date_from:
+            queryset = queryset.filter(finalized_at__gte=date_from)
+        
+        date_to = self.request.GET.get('date_to')
+        if date_to:
+            queryset = queryset.filter(finalized_at__lte=date_to)
+        
+        return queryset
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search'] = self.request.GET.get('search', '')
+        context['status_filter'] = self.request.GET.get('status', '')
+        context['date_from'] = self.request.GET.get('date_from', '')
+        context['date_to'] = self.request.GET.get('date_to', '')
+        
+        # Estatísticas
+        queryset = self.get_queryset()
+        context['total_sales'] = queryset.count()
+        context['total_amount'] = sum(sale.total for sale in queryset)
+        
+        return context
+
+
+class SaleDetailView(LoginRequiredMixin, View):
+    """Exibe detalhes completos de uma venda."""
+    template_name = 'pos/sale_detail.html'
+    
+    def get(self, request, pk):
+        sale = get_object_or_404(
+            Sale.objects.select_related('customer', 'user').prefetch_related(
+                'items__product',
+                'payments__payment_method',
+                'ledger_entries'
+            ),
+            pk=pk
+        )
+        
+        context = {
+            'sale': sale,
+            'items': sale.items.all(),
+            'payments': sale.payments.all(),
+            'ledger_entries': sale.ledger_entries.all(),
+        }
+        
+        return render(request, self.template_name, context)
+
+
+class PaymentMethodListView(LoginRequiredMixin, View):
+    """View para listar e criar métodos de pagamento."""
+    template_name = 'pos/payment_method_list.html'
+
+    def get(self, request, *args, **kwargs):
+        form = forms.PaymentMethodForm()
+        payment_methods = PaymentMethod.objects.all()
+        return self._render(request, form, payment_methods)
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get('action', 'create')
+
+        if action == 'toggle':
+            method_id = request.POST.get('payment_method_id')
+            payment_method = PaymentMethod.objects.filter(pk=method_id).first()
+
+            if not payment_method:
+                messages.error(request, 'Método de pagamento não encontrado.')
+                return redirect('pos:payment_method_list')
+
+            payment_method.is_active = not payment_method.is_active
+            payment_method.save(update_fields=['is_active', 'updated_at'])
+            status = 'ativado' if payment_method.is_active else 'desativado'
+            messages.success(request, f'Método "{payment_method.name}" {status} com sucesso.')
+            return redirect('pos:payment_method_list')
+
+        form = forms.PaymentMethodForm(request.POST)
+        payment_methods = PaymentMethod.objects.all()
+
+        if form.is_valid():
+            payment_method = form.save()
+            messages.success(request, f'Método "{payment_method.name}" cadastrado com sucesso.')
+            return redirect('pos:payment_method_list')
+
+        messages.error(request, 'Corrija os erros abaixo para continuar.')
+        return self._render(request, form, payment_methods)
+
+    def _render(self, request, form, payment_methods):
+        return render(
+            request,
+            self.template_name,
+            {
+                'form': form,
+                'payment_methods': payment_methods,
+            },
+        )
+
+
+class PaymentMethodUpdateView(LoginRequiredMixin, View):
+    """View para editar um método de pagamento."""
+    template_name = 'pos/payment_method_update.html'
+
+    def get(self, request, pk):
+        payment_method = get_object_or_404(PaymentMethod, pk=pk)
+        form = forms.PaymentMethodForm(instance=payment_method)
+        return render(request, self.template_name, {'form': form, 'payment_method': payment_method})
+
+    def post(self, request, pk):
+        payment_method = get_object_or_404(PaymentMethod, pk=pk)
+        form = forms.PaymentMethodForm(request.POST, instance=payment_method)
+
+        if form.is_valid():
+            payment_method = form.save()
+            messages.success(request, f'Método "{payment_method.name}" atualizado com sucesso.')
+            return redirect('pos:payment_method_list')
+
+        messages.error(request, 'Corrija os erros abaixo para continuar.')
+        return render(request, self.template_name, {'form': form, 'payment_method': payment_method})
+

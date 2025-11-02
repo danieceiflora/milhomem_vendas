@@ -11,6 +11,7 @@ from django.views.generic import DetailView, ListView, TemplateView
 from rest_framework import generics
 from app import metrics
 from customers.models import Customer
+from pos.models import PaymentMethod
 from . import forms, models, serializers
 
 
@@ -183,24 +184,25 @@ class OutflowCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 
 class PaymentMethodListView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """View para listar e criar métodos de pagamento - redireciona para app pos."""
     template_name = 'payment_method_list.html'
-    permission_required = 'outflows.view_paymentmethod'
+    permission_required = 'pos.view_paymentmethod'
 
     def get(self, request, *args, **kwargs):
         form = forms.PaymentMethodForm()
-        payment_methods = models.PaymentMethod.objects.all()
+        payment_methods = PaymentMethod.objects.all()
         return self._render(request, form, payment_methods)
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get('action', 'create')
 
         if action == 'toggle':
-            if not request.user.has_perm('outflows.change_paymentmethod'):
+            if not request.user.has_perm('pos.change_paymentmethod'):
                 messages.error(request, 'Você não tem permissão para alterar métodos de pagamento.')
                 return redirect('payment_method_list')
 
             method_id = request.POST.get('payment_method_id')
-            payment_method = models.PaymentMethod.objects.filter(pk=method_id).first()
+            payment_method = PaymentMethod.objects.filter(pk=method_id).first()
 
             if not payment_method:
                 messages.error(request, 'Método de pagamento não encontrado.')
@@ -212,12 +214,12 @@ class PaymentMethodListView(LoginRequiredMixin, PermissionRequiredMixin, View):
             messages.success(request, f'Método "{payment_method.name}" {status} com sucesso.')
             return redirect('payment_method_list')
 
-        if not request.user.has_perm('outflows.add_paymentmethod'):
+        if not request.user.has_perm('pos.add_paymentmethod'):
             messages.error(request, 'Você não tem permissão para cadastrar métodos de pagamento.')
             return redirect('payment_method_list')
 
         form = forms.PaymentMethodForm(request.POST)
-        payment_methods = models.PaymentMethod.objects.all()
+        payment_methods = PaymentMethod.objects.all()
 
         if form.is_valid():
             payment_method = form.save()

@@ -152,7 +152,21 @@
         >
           <option value="">Selecione o método</option>
           {% for pm in payment_methods %}
-          <option value="{{ pm.id }}" data-name="{{ pm.name }}">{{ pm.name }}</option>
+          <option 
+            value="{{ pm.id }}" 
+            data-name="{{ pm.name }}"
+            data-charge-percentage="{{ pm.charge_percentage }}"
+            data-fee-payer="{{ pm.fee_payer }}"
+          >
+            {{ pm.name }}
+            {% if pm.fee_percentage > 0 %}
+              {% if pm.fee_payer == 'customer' %}
+                (+ {{ pm.fee_percentage }}% taxa)
+              {% else %}
+                (↓ {{ pm.fee_percentage }}% desconto)
+              {% endif %}
+            {% endif %}
+          </option>
           {% endfor %}
         </select>
 

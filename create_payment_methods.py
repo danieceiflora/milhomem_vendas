@@ -1,4 +1,4 @@
-from outflows.models import PaymentMethod
+from pos.models import PaymentMethod
 from decimal import Decimal
 
 methods = [
@@ -12,8 +12,10 @@ for name, disc in methods:
     pm, created = PaymentMethod.objects.get_or_create(
         name=name,
         defaults={
-            'discount_percentage': Decimal(str(disc)),
+            'fee_percentage': Decimal(str(disc)),
+            'fee_payer': 'merchant',  # Desconto para o lojista
             'is_active': True
         }
     )
     print(f'{name}: {pm.id} (criado={created})')
+

@@ -4,10 +4,63 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from customers.models import Customer
 from products.models import Product
-from outflows.models import PaymentMethod
 
 
 TWO_PLACES = Decimal('0.01')
+
+
+class PaymentMethod(models.Model):
+    """Método de pagamento com taxa/desconto configurável."""
+    
+    class FeePayerType(models.TextChoices):
+        MERCHANT = 'merchant', 'Lojista (desconto)'
+        CUSTOMER = 'customer', 'Cliente (acréscimo)'
+    
+    name = models.CharField('Nome', max_length=100, unique=True)
+    description = models.TextField('Descrição', blank=True)
+    fee_percentage = models.DecimalField(
+        'Percentual de taxa/desconto', 
+        max_digits=5, 
+        decimal_places=2, 
+        default=Decimal('0'),
+        help_text='Percentual aplicado (pode ser desconto ou acréscimo)'
+    )
+    fee_payer = models.CharField(
+        'Quem paga a taxa',
+        max_length=10,
+        choices=FeePayerType.choices,
+        default=FeePayerType.MERCHANT,
+        help_text='Lojista = desconto no valor | Cliente = acréscimo no valor'
+    )
+    is_active = models.BooleanField('Ativo', default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Método de pagamento'
+        verbose_name_plural = 'Métodos de pagamento'
+        db_table = 'outflows_paymentmethod'  # Manter o nome da tabela existente
+
+    def __str__(self) -> str:
+        fee_type = "↓" if self.fee_payer == self.FeePayerType.MERCHANT else "↑"
+        if self.fee_percentage > 0:
+            return f'{self.name} ({fee_type}{self.fee_percentage}%)'
+        return self.name
+    
+    @property
+    def discount_percentage(self):
+        """Compatibilidade com código antigo - desconto apenas se merchant paga"""
+        if self.fee_payer == self.FeePayerType.MERCHANT:
+            return self.fee_percentage
+        return Decimal('0')
+    
+    @property
+    def charge_percentage(self):
+        """Acréscimo apenas se cliente paga"""
+        if self.fee_payer == self.FeePayerType.CUSTOMER:
+            return self.fee_percentage
+        return Decimal('0')
 
 
 class Sale(models.Model):
@@ -191,7 +244,7 @@ class SalePayment(models.Model):
         verbose_name='Venda'
     )
     payment_method = models.ForeignKey(
-        PaymentMethod,
+        'PaymentMethod',
         on_delete=models.PROTECT,
         related_name='pos_payments',
         verbose_name='Método de pagamento'

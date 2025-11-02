@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Sale, SaleItem, SalePayment, LedgerEntry
+from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
 
 
 class SaleItemInline(admin.TabularInline):
@@ -110,3 +110,51 @@ class LedgerEntryAdmin(admin.ModelAdmin):
     def mark_as_cancelled(self, request, queryset):
         updated = queryset.update(status=LedgerEntry.Status.CANCELLED)
         self.message_user(request, f'{updated} lançamento(s) cancelado(s).')
+
+
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'fee_display', 'fee_payer_badge', 'is_active_badge', 'updated_at')
+    list_filter = ('is_active', 'fee_payer')
+    search_fields = ('name', 'description')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('name', 'description', 'is_active')
+        }),
+        ('Configuração de Taxa', {
+            'fields': ('fee_percentage', 'fee_payer'),
+            'description': 'Configure se haverá desconto (lojista paga) ou acréscimo (cliente paga)'
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def fee_display(self, obj):
+        if obj.fee_percentage > 0:
+            return f'{obj.fee_percentage}%'
+        return 'Sem taxa'
+    fee_display.short_description = 'Taxa'
+    
+    def fee_payer_badge(self, obj):
+        if obj.fee_payer == 'customer':
+            return format_html(
+                '<span style="background-color: #ef4444; color: white; padding: 3px 8px; border-radius: 3px;">↑ Cliente</span>'
+            )
+        return format_html(
+            '<span style="background-color: #10b981; color: white; padding: 3px 8px; border-radius: 3px;">↓ Lojista</span>'
+        )
+    fee_payer_badge.short_description = 'Quem Paga'
+    
+    def is_active_badge(self, obj):
+        if obj.is_active:
+            return format_html(
+                '<span style="background-color: green; color: white; padding: 3px 8px; border-radius: 3px;">✓ Ativo</span>'
+            )
+        return format_html(
+            '<span style="background-color: gray; color: white; padding: 3px 8px; border-radius: 3px;">✗ Inativo</span>'
+        )
+    is_active_badge.short_description = 'Status'

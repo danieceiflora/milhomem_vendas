@@ -7,12 +7,11 @@ from decimal import Decimal
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from pos import services
-from pos.models import Sale, SaleItem, SalePayment, LedgerEntry
+from pos.models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
 from customers.models import Customer
 from products.models import Product
 from brands.models import Brand
 from categories.models import Category
-from outflows.models import PaymentMethod
 
 
 class ServiceTestCase(TestCase):

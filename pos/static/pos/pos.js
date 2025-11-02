@@ -511,6 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const methodId = e.target.value;
     const selectedOption = e.target.options[e.target.selectedIndex];
     const methodName = selectedOption?.dataset.name || '';
+    const chargePercentage = parseFloat(selectedOption?.dataset.chargePercentage || '0');
     
     if (!methodId) {
       cashFields.classList.add('hidden');
@@ -521,6 +522,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const isCash = methodName.toLowerCase().includes('dinheiro');
     
+    // Calcula valor com taxa se cliente paga
+    let remainingWithFee = saleData.remaining || 0;
+    if (chargePercentage > 0 && remainingWithFee > 0) {
+      // Adiciona taxa ao valor restante
+      const fee = remainingWithFee * (chargePercentage / 100);
+      remainingWithFee = remainingWithFee + fee;
+    }
+    
     if (isCash) {
       cashFields.classList.remove('hidden');
       otherFields.classList.add('hidden');
@@ -529,7 +538,15 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       cashFields.classList.add('hidden');
       otherFields.classList.remove('hidden');
-      paymentAmount.value = saleData.remaining || '';
+      // Preenche com valor + taxa (se houver)
+      paymentAmount.value = remainingWithFee.toFixed(2);
+      
+      // Mostra aviso se há taxa
+      if (chargePercentage > 0) {
+        const feeAmount = (remainingWithFee - saleData.remaining).toFixed(2);
+        paymentAmount.title = `Valor original: R$ ${saleData.remaining.toFixed(2)} + Taxa ${chargePercentage}%: R$ ${feeAmount}`;
+      }
+      
       paymentAmount.focus();
     }
     

@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}
+Editar Método de Pagamento
+{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-rose-400 via-orange-400 to-rose-400 bg-clip-text text-transparent">
+        Editar Método de Pagamento
+      </h1>
+      <p class="text-muted-foreground mt-2">Atualize as informações do método de pagamento.</p>
+    </div>
+    <a href="{% url 'pos:payment_method_list' %}" class="inline-flex items-center space-x-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+      <i data-lucide="arrow-left" class="h-4 w-4"></i>
+      <span>Voltar</span>
+    </a>
+  </div>
+</div>
+
+<div class="max-w-2xl">
+  <div class="rounded-lg border border-border bg-gradient-to-br from-rose-500/10 via-orange-500/5 to-rose-500/10 p-6 glass-effect">
+    <div class="flex items-center space-x-3 mb-6">
+      <div class="h-12 w-12 rounded-xl bg-gradient-to-r from-rose-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+        <i data-lucide="credit-card" class="h-6 w-6"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold">{{ payment_method.name }}</h2>
+        <p class="text-sm text-muted-foreground">Edite os dados abaixo</p>
+      </div>
+    </div>
+
+    <form method="post" class="space-y-5">
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="space-y-2">
+          <label for="{{ field.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+            {% if field.name == 'name' %}
+              <i data-lucide="tag" class="h-4 w-4 text-rose-400"></i>
+            {% elif field.name == 'fee_percentage' %}
+              <i data-lucide="percent" class="h-4 w-4 text-rose-400"></i>
+            {% elif field.name == 'fee_payer' %}
+              <i data-lucide="users" class="h-4 w-4 text-rose-400"></i>
+            {% elif field.name == 'is_active' %}
+              <i data-lucide="toggle-left" class="h-4 w-4 text-rose-400"></i>
+            {% else %}
+              <i data-lucide="file-text" class="h-4 w-4 text-rose-400"></i>
+            {% endif %}
+            <span>{{ field.label }}</span>
+          </label>
+          <div class="space-y-2">
+            {{ field }}
+            {% if field.help_text %}
+              <p class="text-xs text-muted-foreground">{{ field.help_text }}</p>
+            {% endif %}
+            {% if field.errors %}
+              <div class="text-red-400 text-sm flex items-center space-x-1">
+                <i data-lucide="alert-circle" class="h-4 w-4"></i>
+                <span>{{ field.errors.0 }}</span>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+
+      {% if form.non_field_errors %}
+        <div class="text-red-400 text-sm flex items-center space-x-1">
+          <i data-lucide="alert-octagon" class="h-4 w-4"></i>
+          <span>{{ form.non_field_errors.0 }}</span>
+        </div>
+      {% endif %}
+
+      <div class="flex items-center space-x-3 pt-4">
+        <button type="submit" class="inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+          <i data-lucide="save" class="h-4 w-4"></i>
+          <span>Salvar alterações</span>
+        </button>
+        <a href="{% url 'pos:payment_method_list' %}" class="inline-flex items-center justify-center space-x-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+          <span>Cancelar</span>
+        </a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

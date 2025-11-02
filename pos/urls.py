@@ -9,6 +9,14 @@ urlpatterns = [
     path('', views.POSNewView.as_view(), name='new'),
     path('new/', views.POSNewView.as_view(), name='new_alt'),
     
+    # Listagem e detalhes de vendas
+    path('sales/', views.SaleListView.as_view(), name='sale_list'),
+    path('sales/<int:pk>/', views.SaleDetailView.as_view(), name='sale_detail'),
+    
+    # Métodos de pagamento
+    path('payment-methods/', views.PaymentMethodListView.as_view(), name='payment_method_list'),
+    path('payment-methods/<int:pk>/edit/', views.PaymentMethodUpdateView.as_view(), name='payment_method_update'),
+    
     # Teste de API (apenas para debug)
     path('test-api/', TemplateView.as_view(template_name='pos/test_api.html'), name='test_api'),
     

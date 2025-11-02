@@ -29,7 +29,7 @@ class Outflow(models.Model):
         related_name='child_operations',
     )
     payment_method = models.ForeignKey(
-        'outflows.PaymentMethod',
+        'pos.PaymentMethod',
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -134,25 +134,6 @@ class Outflow(models.Model):
         discount = discount.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
         self.payment_discount_amount = discount
         self.final_amount = gross_total - discount
-
-
-class PaymentMethod(models.Model):
-    name = models.CharField('Nome', max_length=100, unique=True)
-    description = models.TextField('Descrição', blank=True)
-    discount_percentage = models.DecimalField(
-        'Percentual de desconto', max_digits=5, decimal_places=2, default=Decimal('0')
-    )
-    is_active = models.BooleanField('Ativo', default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['name']
-        verbose_name = 'Método de pagamento'
-        verbose_name_plural = 'Métodos de pagamento'
-
-    def __str__(self) -> str:
-        return self.name
 
 
 class OutflowItem(models.Model):

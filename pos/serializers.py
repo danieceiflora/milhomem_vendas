@@ -1,8 +1,7 @@
 from rest_framework import serializers
-from .models import Sale, SaleItem, SalePayment, LedgerEntry
+from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
 from customers.models import Customer
 from products.models import Product
-from outflows.models import PaymentMethod
 
 
 class SaleItemSerializer(serializers.ModelSerializer):

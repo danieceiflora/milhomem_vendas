@@ -6,10 +6,9 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.utils import timezone
 from typing import Optional, Dict, Any
-from .models import Sale, SaleItem, SalePayment, LedgerEntry
+from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
 from customers.models import Customer
 from products.models import Product
-from outflows.models import PaymentMethod
 
 
 TWO_PLACES = Decimal('0.01')
@@ -256,9 +255,10 @@ def recalc_totals(sale: Sale) -> Sale:
 
 
 @transaction.atomic
+@transaction.atomic
 def finalize_sale(sale: Sale, resolution: Optional[str] = None) -> Dict[str, Any]:
     """
-    Finaliza a venda.
+    Finaliza a venda e atualiza o estoque dos produtos.
     
     Retorna:
         - {'status': 'success'} se finalizado
@@ -357,6 +357,12 @@ def finalize_sale(sale: Sale, resolution: Optional[str] = None) -> Dict[str, Any
     sale.status = Sale.Status.FINALIZED
     sale.finalized_at = timezone.now()
     sale.save(update_fields=['status', 'finalized_at'])
+    
+    # Atualiza o estoque dos produtos (debita as quantidades vendidas)
+    for item in sale.items.select_related('product'):
+        product = item.product
+        product.quantity -= item.quantity
+        product.save(update_fields=['quantity'])
     
     return {'status': 'success', 'sale_id': sale.pk}
 

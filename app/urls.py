@@ -25,7 +25,7 @@ urlpatterns = [
     path('', include('products.urls')),
     path('', include('inflows.urls')),
     path('', include('customers.urls')),
-    path('', include('outflows.urls')),
+    # path('', include('outflows.urls')),  # Mantido apenas para dados históricos - acesso via admin
     path('pos/', include('pos.urls')),
 ]
 

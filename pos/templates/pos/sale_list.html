@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Histórico de Vendas - PDV{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+        Histórico de Vendas
+      </h1>
+      <p class="text-muted-foreground mt-2">Consulte e gerencie todas as vendas realizadas</p>
+    </div>
+    <a
+      href="{% url 'pos:new' %}"
+      class="inline-flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
+    >
+      <i data-lucide="plus" class="h-4 w-4"></i>
+      <span>Nova Venda</span>
+    </a>
+  </div>
+</div>
+
+<!-- Estatísticas -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3">
+      <div class="h-12 w-12 bg-blue-500/20 text-blue-500 rounded-lg flex items-center justify-center">
+        <i data-lucide="shopping-bag" class="h-6 w-6"></i>
+      </div>
+      <div>
+        <p class="text-sm text-muted-foreground">Total de Vendas</p>
+        <p class="text-2xl font-bold">{{ total_sales }}</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3">
+      <div class="h-12 w-12 bg-green-500/20 text-green-500 rounded-lg flex items-center justify-center">
+        <i data-lucide="dollar-sign" class="h-6 w-6"></i>
+      </div>
+      <div>
+        <p class="text-sm text-muted-foreground">Valor Total</p>
+        <p class="text-2xl font-bold">R$ {{ total_amount|floatformat:2 }}</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3">
+      <div class="h-12 w-12 bg-purple-500/20 text-purple-500 rounded-lg flex items-center justify-center">
+        <i data-lucide="trending-up" class="h-6 w-6"></i>
+      </div>
+      <div>
+        <p class="text-sm text-muted-foreground">Ticket Médio</p>
+        <p class="text-2xl font-bold">
+          {% if total_sales > 0 %}
+            {% widthratio total_amount total_sales 1 as avg %}
+            R$ {{ avg|floatformat:2 }}
+          {% else %}
+            R$ 0,00
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="rounded-lg border border-border bg-card p-6 mb-6">
+  <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <label class="block text-sm font-medium mb-2">Buscar</label>
+      <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="ID, Cliente, Telefone..."
+        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+      >
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium mb-2">Data Inicial</label>
+      <input
+        type="date"
+        name="date_from"
+        value="{{ date_from }}"
+        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+      >
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium mb-2">Data Final</label>
+      <input
+        type="date"
+        name="date_to"
+        value="{{ date_to }}"
+        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+      >
+    </div>
+    
+    <div class="flex items-end">
+      <button
+        type="submit"
+        class="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200"
+      >
+        Filtrar
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Tabela de Vendas -->
+<div class="rounded-lg border border-border bg-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-muted/50">
+        <tr>
+          <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">ID</th>
+          <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Data/Hora</th>
+          <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Cliente</th>
+          <th class="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Itens</th>
+          <th class="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Total</th>
+          <th class="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Pago</th>
+          <th class="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Vendedor</th>
+          <th class="px-4 py-3 text-center text-sm font-medium text-muted-foreground">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {% for sale in sales %}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-4 py-3 text-sm font-mono">#{{ sale.id }}</td>
+          <td class="px-4 py-3 text-sm">
+            <div>{{ sale.finalized_at|date:"d/m/Y" }}</div>
+            <div class="text-xs text-muted-foreground">{{ sale.finalized_at|date:"H:i" }}</div>
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <div class="font-medium">{{ sale.customer.full_name }}</div>
+            <div class="text-xs text-muted-foreground">{{ sale.customer.phone }}</div>
+          </td>
+          <td class="px-4 py-3 text-sm">
+            <span class="inline-flex items-center rounded-full bg-blue-500/20 px-2 py-1 text-xs font-medium text-blue-300">
+              {{ sale.items.count }} item{{ sale.items.count|pluralize }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-sm text-right font-medium">
+            R$ {{ sale.total|floatformat:2 }}
+          </td>
+          <td class="px-4 py-3 text-sm text-right">
+            <span class="text-green-500">R$ {{ sale.total_paid|floatformat:2 }}</span>
+          </td>
+          <td class="px-4 py-3 text-sm text-center">
+            <span class="text-xs text-muted-foreground">{{ sale.user.username }}</span>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <a
+              href="{% url 'pos:sale_detail' sale.id %}"
+              class="inline-flex items-center space-x-1 text-primary hover:text-primary/80 transition-colors"
+            >
+              <i data-lucide="eye" class="h-4 w-4"></i>
+              <span class="text-sm">Ver</span>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="px-4 py-12 text-center text-muted-foreground">
+            <div class="flex flex-col items-center space-y-3">
+              <i data-lucide="inbox" class="h-12 w-12 text-muted-foreground/50"></i>
+              <p>Nenhuma venda encontrada</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Paginação -->
+  {% if is_paginated %}
+  <div class="flex items-center justify-between border-t border-border px-4 py-3">
+    <div class="text-sm text-muted-foreground">
+      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    </div>
+    <div class="flex space-x-2">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="px-3 py-1 rounded border border-border hover:bg-muted transition-colors">
+          Primeira
+        </a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="px-3 py-1 rounded border border-border hover:bg-muted transition-colors">
+          Anterior
+        </a>
+      {% endif %}
+      
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="px-3 py-1 rounded border border-border hover:bg-muted transition-colors">
+          Próxima
+        </a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}" class="px-3 py-1 rounded border border-border hover:bg-muted transition-colors">
+          Última
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

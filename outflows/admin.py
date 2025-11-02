@@ -44,8 +44,5 @@ class OutflowReturnItemAdmin(admin.ModelAdmin):
     search_fields = ('product__title', 'outflow__customer__full_name')
 
 
-@admin.register(models.PaymentMethod)
-class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ('name', 'discount_percentage', 'is_active', 'updated_at')
-    list_filter = ('is_active',)
-    search_fields = ('name',)
+# PaymentMethod foi movido para pos.models
+# Registrado em pos/admin.py

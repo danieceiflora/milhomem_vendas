@@ -3,6 +3,7 @@ from decimal import Decimal
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet, inlineformset_factory
+from pos.models import PaymentMethod
 from . import models
 
 
@@ -32,7 +33,7 @@ class OutflowForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['payment_method'].queryset = models.PaymentMethod.objects.filter(is_active=True)
+        self.fields['payment_method'].queryset = PaymentMethod.objects.filter(is_active=True)
         self.fields['payment_method'].required = True
         self.fields['payment_method'].widget.attrs.update({'data-role': 'payment-method-select'})
 
@@ -45,9 +46,10 @@ class OutflowForm(forms.ModelForm):
 
 
 class PaymentMethodForm(forms.ModelForm):
+    """Formulário mantido para compatibilidade - agora usa modelo do app pos."""
     class Meta:
-        model = models.PaymentMethod
-        fields = ['name', 'description', 'discount_percentage', 'is_active']
+        model = PaymentMethod
+        fields = ['name', 'description', 'fee_percentage', 'fee_payer', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
@@ -62,13 +64,18 @@ class PaymentMethodForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'Detalhes adicionais sobre o método.',
             }),
-            'discount_percentage': forms.NumberInput(attrs={
+            'fee_percentage': forms.NumberInput(attrs={
                 'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
                          'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
                          'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                 'step': '0.01',
                 'min': '0',
                 'max': '100',
+                'placeholder': 'Ex.: 2.50',
+            }),
+            'fee_payer': forms.Select(attrs={
+                'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
+                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
             }),
             'is_active': forms.CheckboxInput(attrs={
                 'class': 'h-4 w-4 rounded border border-input text-primary focus:ring-primary',
@@ -77,12 +84,17 @@ class PaymentMethodForm(forms.ModelForm):
         labels = {
             'name': 'Nome do método',
             'description': 'Descrição',
-            'discount_percentage': 'Percentual de desconto (%)',
+            'fee_percentage': 'Percentual (%)',
+            'fee_payer': 'Quem paga a taxa?',
             'is_active': 'Ativo',
         }
+        help_texts = {
+            'fee_percentage': 'Percentual que será aplicado (desconto ou acréscimo)',
+            'fee_payer': 'Lojista = desconto no valor final | Cliente = acréscimo no valor final',
+        }
 
-    def clean_discount_percentage(self):
-        value = self.cleaned_data.get('discount_percentage')
+    def clean_fee_percentage(self):
+        value = self.cleaned_data.get('fee_percentage')
         if value is None:
             return Decimal('0')
         if value < 0:
