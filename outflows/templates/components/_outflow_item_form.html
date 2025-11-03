@@ -1,82 +1,176 @@
-<div class="rounded-lg border border-border bg-secondary/20 p-4 space-y-4 relative" data-form-prefix="{{ form.prefix }}">
-  {{ form.id }}
-  {{ form.DELETE.as_hidden }}
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div class="space-y-2 md:col-span-2 lg:col-span-1">
-      <label for="{{ form.product.id_for_label }}_search" class="text-sm font-medium leading-none flex items-center space-x-2">
-        <i data-lucide="package" class="h-4 w-4 text-primary"></i>
-        <span>Produto</span>
-      </label>
-      {{ form.product }}
-      <div class="space-y-3">
-        <div class="relative">
-          <input
-            type="text"
-            placeholder="Busque por código, série ou nome do produto"
-            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            autocomplete="off"
-            id="{{ form.product.id_for_label }}_search"
-            data-product-search
-          >
-          <div class="absolute left-0 right-0 mt-2 max-h-56 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden" data-product-results></div>
-        </div>
-        <div class="hidden space-y-2 rounded-lg border border-primary/20 bg-primary/10 p-4" data-product-selected>
-          <div>
-            <p class="font-medium text-foreground" data-product-name></p>
-            <p class="text-xs text-muted-foreground" data-product-code></p>
-          </div>
-          <div class="flex items-center justify-between text-xs text-muted-foreground">
-            <span data-product-stock></span>
-            <span class="font-semibold text-primary" data-product-price></span>
-          </div>
-          <button type="button" class="inline-flex items-center space-x-1 text-xs font-medium text-primary hover:text-primary/80" data-product-clear>
-            <i data-lucide="refresh-cw" class="h-3 w-3"></i>
-            <span>Trocar produto</span>
-          </button>
-        </div>
-        <p class="text-xs text-muted-foreground" data-product-helper>Selecione um produto para liberar quantidade e preço.</p>
-      </div>
-      {% if form.product.errors %}
+<div class="rounded-lg border border-border bg-secondary/20 p-4 space-y-4 relative" data-form-prefix="{{ form.prefix }}"><div class="rounded-lg border border-border bg-secondary/20 p-4 space-y-4 relative" data-form-prefix="{{ form.prefix }}">
+
+  {{ form.id }}  {{ form.id }}
+
+  {{ form.DELETE.as_hidden }}  {{ form.DELETE.as_hidden }}
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">    <div class="space-y-2 md:col-span-2 lg:col-span-1">
+
+    <!-- Produto -->      <label for="{{ form.product.id_for_label }}_search" class="text-sm font-medium leading-none flex items-center space-x-2">
+
+    <div class="space-y-2 lg:col-span-2">        <i data-lucide="package" class="h-4 w-4 text-primary"></i>
+
+      <label for="{{ form.product.id_for_label }}_search" class="text-sm font-medium leading-none flex items-center space-x-2">        <span>Produto</span>
+
+        <i data-lucide="package" class="h-4 w-4 text-primary"></i>      </label>
+
+        <span>Produto</span>      {{ form.product }}
+
+        <span class="text-red-400">*</span>      <div class="space-y-3">
+
+      </label>        <div class="relative">
+
+      {{ form.product }}          <input
+
+      <div class="space-y-3">            type="text"
+
+        <div class="relative">            placeholder="Busque por código, série ou nome do produto"
+
+          <input            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+
+            type="text"            autocomplete="off"
+
+            placeholder="Busque por código, série ou nome do produto"            id="{{ form.product.id_for_label }}_search"
+
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"            data-product-search
+
+            autocomplete="off"          >
+
+            id="{{ form.product.id_for_label }}_search"          <div class="absolute left-0 right-0 mt-2 max-h-56 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden" data-product-results></div>
+
+            data-product-search        </div>
+
+          >        <div class="hidden space-y-2 rounded-lg border border-primary/20 bg-primary/10 p-4" data-product-selected>
+
+          <div class="absolute left-0 right-0 mt-2 max-h-56 overflow-y-auto rounded-md border border-border bg-card shadow-xl hidden z-10" data-product-results></div>          <div>
+
+        </div>            <p class="font-medium text-foreground" data-product-name></p>
+
+        <div class="hidden space-y-2 rounded-lg border border-primary/20 bg-primary/10 p-4" data-product-selected>            <p class="text-xs text-muted-foreground" data-product-code></p>
+
+          <div>          </div>
+
+            <p class="font-medium text-foreground" data-product-name></p>          <div class="flex items-center justify-between text-xs text-muted-foreground">
+
+            <p class="text-xs text-muted-foreground" data-product-code></p>            <span data-product-stock></span>
+
+          </div>            <span class="font-semibold text-primary" data-product-price></span>
+
+          <div class="flex items-center justify-between text-xs">          </div>
+
+            <span class="text-muted-foreground" data-product-stock></span>          <button type="button" class="inline-flex items-center space-x-1 text-xs font-medium text-primary hover:text-primary/80" data-product-clear>
+
+          </div>            <i data-lucide="refresh-cw" class="h-3 w-3"></i>
+
+          <button type="button" class="inline-flex items-center space-x-1 text-xs font-medium text-primary hover:text-primary/80" data-product-clear>            <span>Trocar produto</span>
+
+            <i data-lucide="refresh-cw" class="h-3 w-3"></i>          </button>
+
+            <span>Trocar produto</span>        </div>
+
+          </button>        <p class="text-xs text-muted-foreground" data-product-helper>Selecione um produto para liberar quantidade e preço.</p>
+
+        </div>      </div>
+
+        <p class="text-xs text-muted-foreground" data-product-helper>Selecione um produto para continuar.</p>      {% if form.product.errors %}
+
+      </div>        <div class="text-red-400 text-sm flex items-center space-x-1">
+
+      {% if form.product.errors %}          <i data-lucide="alert-circle" class="h-4 w-4"></i>
+
+        <div class="text-red-400 text-sm flex items-center space-x-1">          <span>{{ form.product.errors.0 }}</span>
+
+          <i data-lucide="alert-circle" class="h-4 w-4"></i>        </div>
+
+          <span>{{ form.product.errors.0 }}</span>      {% endif %}
+
+        </div>    </div>
+
+      {% endif %}    <div class="space-y-2">
+
+    </div>      <label for="{{ form.quantity.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+
+            <i data-lucide="hash" class="h-4 w-4 text-primary"></i>
+
+    <!-- Quantidade -->        <span>Quantidade</span>
+
+    <div class="space-y-2">      </label>
+
+      <label for="{{ form.quantity.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">      {{ form.quantity }}
+
+        <i data-lucide="hash" class="h-4 w-4 text-primary"></i>      {% if form.quantity.errors %}
+
+        <span>Quantidade</span>        <div class="text-red-400 text-sm flex items-center space-x-1">
+
+        <span class="text-red-400">*</span>          <i data-lucide="alert-circle" class="h-4 w-4"></i>
+
+      </label>          <span>{{ form.quantity.errors.0 }}</span>
+
+      {{ form.quantity }}        </div>
+
+      {% if form.quantity.errors %}      {% endif %}
+
+        <div class="text-red-400 text-sm flex items-center space-x-1">    </div>
+
+          <i data-lucide="alert-circle" class="h-4 w-4"></i>    <div class="space-y-2">
+
+          <span>{{ form.quantity.errors.0 }}</span>      <label for="{{ form.unit_price.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
+
+        </div>        <i data-lucide="dollar-sign" class="h-4 w-4 text-primary"></i>
+
+      {% endif %}        <span>Preço unitário (R$)</span>
+
+      <p class="text-xs text-muted-foreground">{{ form.quantity.help_text }}</p>      </label>
+
+    </div>      {{ form.unit_price }}
+
+  </div>      {% if form.unit_price.errors %}
+
         <div class="text-red-400 text-sm flex items-center space-x-1">
-          <i data-lucide="alert-circle" class="h-4 w-4"></i>
-          <span>{{ form.product.errors.0 }}</span>
-        </div>
-      {% endif %}
-    </div>
-    <div class="space-y-2">
-      <label for="{{ form.quantity.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
-        <i data-lucide="hash" class="h-4 w-4 text-primary"></i>
-        <span>Quantidade</span>
-      </label>
-      {{ form.quantity }}
-      {% if form.quantity.errors %}
-        <div class="text-red-400 text-sm flex items-center space-x-1">
-          <i data-lucide="alert-circle" class="h-4 w-4"></i>
-          <span>{{ form.quantity.errors.0 }}</span>
-        </div>
-      {% endif %}
-    </div>
-    <div class="space-y-2">
-      <label for="{{ form.unit_price.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
-        <i data-lucide="dollar-sign" class="h-4 w-4 text-primary"></i>
-        <span>Preço unitário (R$)</span>
-      </label>
-      {{ form.unit_price }}
-      {% if form.unit_price.errors %}
-        <div class="text-red-400 text-sm flex items-center space-x-1">
-          <i data-lucide="alert-circle" class="h-4 w-4"></i>
-          <span>{{ form.unit_price.errors.0 }}</span>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-  {% if form.non_field_errors %}
+
+  <!-- Observações -->          <i data-lucide="alert-circle" class="h-4 w-4"></i>
+
+  <div class="space-y-2">          <span>{{ form.unit_price.errors.0 }}</span>
+
+    <label for="{{ form.notes.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">        </div>
+
+      <i data-lucide="sticky-note" class="h-4 w-4 text-primary"></i>      {% endif %}
+
+      <span>Observações</span>    </div>
+
+    </label>  </div>
+
+    {{ form.notes }}  {% if form.non_field_errors %}
+
+    {% if form.notes.errors %}    <div class="text-red-400 text-sm flex items-center space-x-1">
+
+      <div class="text-red-400 text-sm flex items-center space-x-1">      <i data-lucide="alert-octagon" class="h-4 w-4"></i>
+
+        <i data-lucide="alert-circle" class="h-4 w-4"></i>      <span>{{ form.non_field_errors.0 }}</span>
+
+        <span>{{ form.notes.errors.0 }}</span>    </div>
+
+      </div>  {% endif %}
+
+    {% endif %}  <button type="button" class="remove-item absolute top-4 right-4 inline-flex items-center space-x-1 text-xs font-medium text-destructive hover:text-destructive-foreground hover:bg-destructive/20 px-2 py-1 rounded">
+
+    <p class="text-xs text-muted-foreground">{{ form.notes.help_text }}</p>    <i data-lucide="x" class="h-3 w-3"></i>
+
+  </div>    <span>Remover</span>
+
+  </button>
+
+  {% if form.non_field_errors %}</div>
+
     <div class="text-red-400 text-sm flex items-center space-x-1">
       <i data-lucide="alert-octagon" class="h-4 w-4"></i>
       <span>{{ form.non_field_errors.0 }}</span>
     </div>
   {% endif %}
-  <button type="button" class="remove-item absolute top-4 right-4 inline-flex items-center space-x-1 text-xs font-medium text-destructive hover:text-destructive-foreground hover:bg-destructive/20 px-2 py-1 rounded">
+  
+  <button type="button" class="remove-item absolute top-4 right-4 inline-flex items-center space-x-1 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/20 px-2 py-1 rounded transition-colors">
     <i data-lucide="x" class="h-3 w-3"></i>
     <span>Remover</span>
   </button>

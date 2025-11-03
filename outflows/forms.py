@@ -1,19 +1,16 @@
 from collections import defaultdict
-from decimal import Decimal
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import BaseInlineFormSet, inlineformset_factory
-from pos.models import PaymentMethod
 from . import models
 
 
 class OutflowForm(forms.ModelForm):
     class Meta:
         model = models.Outflow
-        fields = ['customer', 'payment_method', 'description']
+        fields = ['outflow_type', 'description', 'recipient']
         widgets = {
-            'customer': forms.HiddenInput(),
-            'payment_method': forms.Select(attrs={
+            'outflow_type': forms.Select(attrs={
                 'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
                          'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
                          'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
@@ -23,95 +20,44 @@ class OutflowForm(forms.ModelForm):
                          'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
                          'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                 'rows': 3,
+                'placeholder': 'Descreva o motivo da saída e detalhes relevantes...',
+            }),
+            'recipient': forms.TextInput(attrs={
+                'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
+                         'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
+                         'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
+                'placeholder': 'Nome da pessoa ou entidade (opcional)',
             }),
         }
         labels = {
-            'customer': 'Cliente',
-            'payment_method': 'Forma de pagamento',
-            'description': 'Observações',
+            'outflow_type': 'Tipo de Saída',
+            'description': 'Descrição',
+            'recipient': 'Destinatário',
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['payment_method'].queryset = PaymentMethod.objects.filter(is_active=True)
-        self.fields['payment_method'].required = True
-        self.fields['payment_method'].widget.attrs.update({'data-role': 'payment-method-select'})
+        help_texts = {
+            'outflow_type': 'Selecione o motivo da saída não faturada',
+            'description': 'Explique o motivo e circunstâncias da saída',
+            'recipient': 'Quem recebeu os produtos (se aplicável)',
+        }
 
     def clean(self):
         cleaned_data = super().clean()
-        payment_method = cleaned_data.get('payment_method')
-        if not payment_method:
-            self.add_error('payment_method', 'Selecione uma forma de pagamento.')
+        outflow_type = cleaned_data.get('outflow_type')
+        description = cleaned_data.get('description')
+        
+        if not outflow_type:
+            self.add_error('outflow_type', 'Selecione o tipo de saída.')
+        
+        if not description or len(description.strip()) < 10:
+            self.add_error('description', 'A descrição deve ter pelo menos 10 caracteres.')
+        
         return cleaned_data
 
 
-class PaymentMethodForm(forms.ModelForm):
-    """Formulário mantido para compatibilidade - agora usa modelo do app pos."""
-    class Meta:
-        model = PaymentMethod
-        fields = ['name', 'description', 'fee_percentage', 'fee_payer', 'is_active']
-        widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
-                         'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
-                         'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                'placeholder': 'Ex.: Cartão de crédito',
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
-                         'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
-                         'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                'rows': 3,
-                'placeholder': 'Detalhes adicionais sobre o método.',
-            }),
-            'fee_percentage': forms.NumberInput(attrs={
-                'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
-                         'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
-                         'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                'step': '0.01',
-                'min': '0',
-                'max': '100',
-                'placeholder': 'Ex.: 2.50',
-            }),
-            'fee_payer': forms.Select(attrs={
-                'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
-                         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-            }),
-            'is_active': forms.CheckboxInput(attrs={
-                'class': 'h-4 w-4 rounded border border-input text-primary focus:ring-primary',
-            }),
-        }
-        labels = {
-            'name': 'Nome do método',
-            'description': 'Descrição',
-            'fee_percentage': 'Percentual (%)',
-            'fee_payer': 'Quem paga a taxa?',
-            'is_active': 'Ativo',
-        }
-        help_texts = {
-            'fee_percentage': 'Percentual que será aplicado (desconto ou acréscimo)',
-            'fee_payer': 'Lojista = desconto no valor final | Cliente = acréscimo no valor final',
-        }
-
-    def clean_fee_percentage(self):
-        value = self.cleaned_data.get('fee_percentage')
-        if value is None:
-            return Decimal('0')
-        if value < 0:
-            raise ValidationError('Informe um percentual maior ou igual a zero.')
-        if value > 100:
-            raise ValidationError('O percentual não pode ultrapassar 100%.')
-        return value
-
-
 class OutflowItemForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['unit_price'].required = False
-
     class Meta:
         model = models.OutflowItem
-        fields = ['product', 'quantity', 'unit_price']
+        fields = ['product', 'quantity', 'notes']
         widgets = {
             'product': forms.HiddenInput(),
             'quantity': forms.NumberInput(attrs={
@@ -120,25 +66,21 @@ class OutflowItemForm(forms.ModelForm):
                          'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                 'min': 1,
             }),
-            'unit_price': forms.NumberInput(attrs={
+            'notes': forms.TextInput(attrs={
                 'class': 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background '
                          'placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 '
                          'focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
-                'step': '0.01',
-                'min': '0',
-                'placeholder': 'Deixe em branco para usar o preço do produto',
+                'placeholder': 'Observações específicas deste item (opcional)',
             }),
         }
         labels = {
             'product': 'Produto',
             'quantity': 'Quantidade',
-            'unit_price': 'Preço unitário (R$)',
+            'notes': 'Observações',
         }
 
 
 class BaseOutflowItemFormSet(BaseInlineFormSet):
-    require_items = True
-
     def clean(self):
         super().clean()
 
@@ -156,7 +98,6 @@ class BaseOutflowItemFormSet(BaseInlineFormSet):
 
             product = cleaned_data.get('product')
             quantity = cleaned_data.get('quantity')
-            unit_price = cleaned_data.get('unit_price')
 
             if not product and not quantity:
                 continue
@@ -171,14 +112,10 @@ class BaseOutflowItemFormSet(BaseInlineFormSet):
                 form.add_error('quantity', 'Informe uma quantidade maior que zero.')
                 continue
 
-            if unit_price is not None and unit_price < 0:
-                form.add_error('unit_price', 'Informe um preço maior ou igual a zero.')
-                continue
-
             totals_by_product[product] += quantity
 
-        if self.require_items and not has_item:
-            raise ValidationError('Adicione ao menos um produto à venda.')
+        if not has_item:
+            raise ValidationError('Adicione ao menos um produto à saída.')
 
         for product, total in totals_by_product.items():
             if total > product.quantity:

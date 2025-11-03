@@ -1,60 +1,36 @@
 {% extends 'base.html' %}
 
-{% block title %}
-  SGE - Vendas
-{% endblock %}
+{% block title %}SGE - Saídas Não Faturadas{% endblock %}
 
 {% block content %}
-
-<!-- Sales Metrics -->
-{% if perms.outflows.view_outflow %}
-  <div class="mb-8">
-    <div class="flex items-center space-x-2 mb-6">
-      <div class="h-6 w-6 bg-gradient-to-r from-red-500 to-orange-600 rounded flex items-center justify-center">
-        <i data-lucide="trending-up" class="h-4 w-4 text-white"></i>
-      </div>
-      <h2 class="text-xl font-semibold">Resumo das Vendas</h2>
-    </div>
-    {% include 'components/_sales_metrics.html' %}
-  </div>
-{% endif %}
 
 <!-- Page Header -->
 <div class="mb-8">
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-3xl font-bold bg-gradient-to-r from-red-400 via-orange-400 to-red-400 bg-clip-text text-transparent">
-        Vendas
+        Saídas Não Faturadas
       </h1>
-      <p class="text-muted-foreground mt-2">Registre e acompanhe as vendas realizadas</p>
+      <p class="text-muted-foreground mt-2">Gerencie saídas de estoque sem faturamento (vencimento, doação, avaria, etc.)</p>
     </div>
-    <div class="flex items-center space-x-2">
-      {% if perms.outflows.view_paymentmethod %}
-        <a href="{% url 'payment_method_list' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
-          <i data-lucide="credit-card" class="w-4 h-4 mr-2"></i>
-          Métodos de pagamento
-        </a>
-      {% endif %}
-      {% if perms.outflows.add_outflow %}
-        <a href="{% url 'outflow_create' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 group">
-          <i data-lucide="plus" class="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200"></i>
-          Nova Venda
-        </a>
-      {% endif %}
-    </div>
+    {% if perms.outflows.add_outflow %}
+      <a href="{% url 'outflow_create' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 group">
+        <i data-lucide="plus" class="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform duration-200"></i>
+        Nova Saída
+      </a>
+    {% endif %}
   </div>
 </div>
 
 <!-- Filters Section -->
 <div class="mb-6">
-  <!-- Search Form -->
   <div class="rounded-lg border border-border bg-card p-4 glass-effect">
     <form method="get" action="{% url 'outflow_list' %}" class="space-y-4">
       <div class="flex items-center space-x-2 mb-3">
-        <i data-lucide="search" class="w-4 h-4 text-muted-foreground"></i>
-        <h3 class="font-medium">Buscar Vendas</h3>
+        <i data-lucide="filter" class="w-4 h-4 text-muted-foreground"></i>
+        <h3 class="font-medium">Filtrar Saídas</h3>
       </div>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         <div class="space-y-2">
           <label for="product" class="text-sm font-medium leading-none">Produto</label>
           <input 
@@ -62,27 +38,53 @@
             id="product"
             name="product" 
             value="{{ filter_product }}"
-            placeholder="Digite o nome do produto"
-            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            placeholder="Nome do produto"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
         </div>
         <div class="space-y-2">
-          <label for="customer" class="text-sm font-medium leading-none">Cliente</label>
+          <label for="outflow_type" class="text-sm font-medium leading-none">Tipo de Saída</label>
+          <select 
+            id="outflow_type"
+            name="outflow_type"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            <option value="">Todos</option>
+            {% for value, label in outflow_types %}
+              <option value="{{ value }}" {% if filter_outflow_type == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="space-y-2">
+          <label for="date_from" class="text-sm font-medium leading-none">De</label>
           <input 
-            type="text" 
-            id="customer"
-            name="customer" 
-            value="{{ filter_customer }}"
-            placeholder="Digite o nome do cliente"
-            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            type="date" 
+            id="date_from"
+            name="date_from" 
+            value="{{ filter_date_from }}"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
         </div>
-        <div class="flex items-end">
-          <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
-            <i data-lucide="search" class="w-4 h-4 mr-2"></i>
-            Buscar
-          </button>
+        <div class="space-y-2">
+          <label for="date_to" class="text-sm font-medium leading-none">Até</label>
+          <input 
+            type="date" 
+            id="date_to"
+            name="date_to" 
+            value="{{ filter_date_to }}"
+            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
         </div>
+      </div>
+      <div class="flex gap-2">
+        <button type="submit" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
+          <i data-lucide="search" class="w-4 h-4 mr-2"></i>
+          Buscar
+        </button>
+        <a href="{% url 'outflow_list' %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2">
+          <i data-lucide="x" class="w-4 h-4 mr-2"></i>
+          Limpar
+        </a>
       </div>
     </form>
   </div>
@@ -94,12 +96,11 @@
     <table class="w-full">
       <thead>
         <tr class="border-b border-border">
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Venda</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Cliente</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Itens líquidos</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total bruto</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Desconto</th>
-          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Total final</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Tipo</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Descrição</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Itens</th>
+          <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Impacto</th>
           <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Data</th>
           <th class="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Ações</th>
         </tr>
@@ -108,68 +109,61 @@
         {% for outflow in outflows %}
           <tr class="border-b border-border transition-colors hover:bg-muted/50">
             <td class="p-4 align-middle">
-              <div class="flex flex-col">
-                <a href="{% url 'outflow_detail' outflow.id %}" class="font-medium text-primary hover:text-primary/80 transition-colors">
-                  #{{ outflow.id }}
-                </a>
-                <span class="text-xs uppercase tracking-wide text-muted-foreground">{{ outflow.get_operation_type_display }}</span>
-                {% if outflow.payment_method %}
-                  <span class="text-xs text-muted-foreground">Pagamento: {{ outflow.payment_method.name }}</span>
+              <a href="{% url 'outflow_detail' outflow.id %}" class="font-medium text-primary hover:text-primary/80 transition-colors">
+                #{{ outflow.id }}
+              </a>
+            </td>
+            <td class="p-4 align-middle">
+              {% if outflow.outflow_type == 'expiration' %}
+                <span class="inline-flex items-center rounded-full bg-yellow-500/20 px-2 py-1 text-xs font-medium text-yellow-300">
+                  <i data-lucide="calendar-x" class="w-3 h-3 mr-1"></i>
+                  {{ outflow.get_outflow_type_display }}
+                </span>
+              {% elif outflow.outflow_type == 'gift' %}
+                <span class="inline-flex items-center rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-300">
+                  <i data-lucide="gift" class="w-3 h-3 mr-1"></i>
+                  {{ outflow.get_outflow_type_display }}
+                </span>
+              {% elif outflow.outflow_type == 'damage' %}
+                <span class="inline-flex items-center rounded-full bg-red-500/20 px-2 py-1 text-xs font-medium text-red-300">
+                  <i data-lucide="package-x" class="w-3 h-3 mr-1"></i>
+                  {{ outflow.get_outflow_type_display }}
+                </span>
+              {% elif outflow.outflow_type == 'defect' %}
+                <span class="inline-flex items-center rounded-full bg-orange-500/20 px-2 py-1 text-xs font-medium text-orange-300">
+                  <i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i>
+                  {{ outflow.get_outflow_type_display }}
+                </span>
+              {% elif outflow.outflow_type == 'loss' %}
+                <span class="inline-flex items-center rounded-full bg-purple-500/20 px-2 py-1 text-xs font-medium text-purple-300">
+                  <i data-lucide="circle-slash" class="w-3 h-3 mr-1"></i>
+                  {{ outflow.get_outflow_type_display }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center rounded-full bg-gray-500/20 px-2 py-1 text-xs font-medium text-gray-300">
+                  <i data-lucide="package-minus" class="w-3 h-3 mr-1"></i>
+                  {{ outflow.get_outflow_type_display }}
+                </span>
+              {% endif %}
+            </td>
+            <td class="p-4 align-middle">
+              <div class="max-w-xs">
+                <div class="font-medium truncate">{{ outflow.description|truncatewords:8 }}</div>
+                {% if outflow.recipient %}
+                  <div class="text-sm text-muted-foreground">Para: {{ outflow.recipient }}</div>
                 {% endif %}
               </div>
             </td>
             <td class="p-4 align-middle">
-              <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-gradient-to-r from-red-500/20 to-orange-600/20 rounded-lg flex items-center justify-center">
-                  <i data-lucide="user" class="w-4 h-4 text-red-400"></i>
-                </div>
-                <div>
-                  <div class="font-medium">{{ outflow.customer.full_name }}</div>
-                  <div class="text-sm text-muted-foreground">CPF: {{ outflow.customer.formatted_cpf }}</div>
-                </div>
+              <span class="inline-flex items-center rounded-full bg-blue-500/20 px-2 py-1 text-sm font-medium text-blue-300">
+                {{ outflow.computed_total_items }} item{{ outflow.computed_total_items|pluralize }}
+              </span>
+            </td>
+            <td class="p-4 align-middle">
+              <div class="text-sm">
+                <div class="font-medium text-red-400">-R$ {{ outflow.computed_impact_amount|floatformat:2 }}</div>
+                <div class="text-muted-foreground text-xs">Custo perdido</div>
               </div>
-            </td>
-            <td class="p-4 align-middle">
-              {% if outflow.computed_total_items < 0 %}
-                <span class="inline-flex items-center rounded-full bg-indigo-500/20 px-2 py-1 text-sm font-medium text-indigo-300">
-                  {{ outflow.computed_total_items }} produto(s)
-                </span>
-              {% else %}
-                <span class="inline-flex items-center rounded-full bg-red-500/20 px-2 py-1 text-sm font-medium text-red-300">
-                  {{ outflow.computed_total_items }} produto(s)
-                </span>
-              {% endif %}
-            </td>
-            <td class="p-4 align-middle">
-              {% if outflow.computed_total_amount < 0 %}
-                <span class="font-semibold text-rose-400">
-                  R$ {{ outflow.computed_total_amount|default:0|floatformat:2 }}
-                </span>
-              {% else %}
-                <span class="font-semibold text-emerald-400">
-                  R$ {{ outflow.computed_total_amount|default:0|floatformat:2 }}
-                </span>
-              {% endif %}
-            </td>
-            <td class="p-4 align-middle">
-              {% if outflow.computed_discount_amount > 0 %}
-                <span class="font-semibold text-amber-300">
-                  -R$ {{ outflow.computed_discount_amount|floatformat:2 }}
-                </span>
-              {% else %}
-                <span class="text-muted-foreground">—</span>
-              {% endif %}
-            </td>
-            <td class="p-4 align-middle">
-              {% if outflow.computed_final_amount < 0 %}
-                <span class="font-semibold text-rose-400">
-                  R$ {{ outflow.computed_final_amount|floatformat:2 }}
-                </span>
-              {% else %}
-                <span class="font-semibold text-emerald-300">
-                  R$ {{ outflow.computed_final_amount|floatformat:2 }}
-                </span>
-              {% endif %}
             </td>
             <td class="p-4 align-middle">
               <div class="text-sm">
@@ -179,7 +173,7 @@
             </td>
             <td class="p-4 align-middle">
               <div class="flex space-x-2">
-                <a href="{% url 'outflow_detail' outflow.id %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8">
+                <a href="{% url 'outflow_detail' outflow.id %}" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8">
                   <i data-lucide="eye" class="w-3 h-3"></i>
                 </a>
               </div>
@@ -187,12 +181,17 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="8" class="p-8 text-center">
+            <td colspan="7" class="p-8 text-center">
               <div class="flex flex-col items-center space-y-3">
                 <div class="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                  <i data-lucide="shopping-bag" class="w-6 h-6 text-muted-foreground"></i>
+                  <i data-lucide="package-x" class="w-6 h-6 text-muted-foreground"></i>
                 </div>
-                <div class="text-muted-foreground">Nenhuma venda encontrada</div>
+                <div class="text-muted-foreground">Nenhuma saída não faturada encontrada</div>
+                {% if perms.outflows.add_outflow %}
+                  <a href="{% url 'outflow_create' %}" class="text-primary hover:text-primary/80 text-sm">
+                    Registrar primeira saída
+                  </a>
+                {% endif %}
               </div>
             </td>
           </tr>
@@ -204,6 +203,5 @@
 
 <!-- Pagination -->
 {% include 'components/_pagination.html' %}
-
 
 {% endblock %}

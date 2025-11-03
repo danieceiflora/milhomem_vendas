@@ -1,17 +1,13 @@
-from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Q
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import DetailView, ListView, TemplateView
+from django.views.generic import DetailView, ListView
 from rest_framework import generics
-from app import metrics
-from customers.models import Customer
-from pos.models import PaymentMethod
 from . import forms, models, serializers
 
 
@@ -19,43 +15,57 @@ class OutflowListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = models.Outflow
     template_name = 'outflow_list.html'
     context_object_name = 'outflows'
-    paginate_by = 10
+    paginate_by = 15
     permission_required = 'outflows.view_outflow'
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        # Filtros
         product = self.request.GET.get('product')
-        customer = self.request.GET.get('customer')
+        outflow_type = self.request.GET.get('outflow_type')
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
 
         if product:
             queryset = queryset.filter(items__product__title__icontains=product)
-        if customer:
-            queryset = queryset.filter(customer__full_name__icontains=customer)
+        
+        if outflow_type:
+            queryset = queryset.filter(outflow_type=outflow_type)
+        
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
 
-        queryset = queryset.filter(operation_type=models.Outflow.OperationType.SALE)
-        queryset = queryset.select_related('customer', 'payment_method').prefetch_related(
+        queryset = queryset.select_related('created_by').prefetch_related(
             Prefetch(
                 'items',
                 queryset=models.OutflowItem.objects.select_related('product__brand', 'product__category'),
             ),
-        ).distinct()
+        ).distinct().order_by('-created_at')
 
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        
+        # Adicionar totais computados para cada saída
         outflows = context['outflows']
-
         for outflow in outflows:
             outflow.computed_total_items = outflow.total_items
-            outflow.computed_total_amount = outflow.total_amount
-            outflow.computed_final_amount = outflow.final_amount
-            outflow.computed_discount_amount = outflow.payment_discount_amount
+            outflow.computed_total_cost = outflow.total_cost
+            outflow.computed_total_value = outflow.total_value
+            outflow.computed_impact_amount = outflow.impact_amount
 
-        context['product_metrics'] = metrics.get_product_metrics()
-        context['sales_metrics'] = metrics.get_sales_metrics()
+        # Adicionar opções de filtro
+        context['outflow_types'] = models.Outflow.OutflowType.choices
         context['filter_product'] = self.request.GET.get('product', '')
-        context['filter_customer'] = self.request.GET.get('customer', '')
+        context['filter_outflow_type'] = self.request.GET.get('outflow_type', '')
+        context['filter_date_from'] = self.request.GET.get('date_from', '')
+        context['filter_date_to'] = self.request.GET.get('date_to', '')
+        
         return context
 
 
@@ -77,26 +87,17 @@ class OutflowCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
             try:
                 with transaction.atomic():
                     outflow = form.save(commit=False)
-                    outflow.operation_type = models.Outflow.OperationType.SALE
-                    outflow.related_outflow = None
-                    outflow.payment_discount_percentage = Decimal('0')
-                    if outflow.payment_method:
-                        outflow.payment_discount_percentage = outflow.payment_method.discount_percentage
-                    outflow.payment_discount_amount = Decimal('0')
-                    outflow.final_amount = Decimal('0')
+                    outflow.created_by = request.user
                     outflow.save()
 
                     items_formset.instance = outflow
                     self._save_items(items_formset, outflow)
-
-                    outflow.refresh_financials()
-                    outflow.save(update_fields=['payment_discount_amount', 'final_amount'])
             except ValidationError as error:
                 for message in getattr(error, 'messages', [str(error)]):
                     form.add_error(None, message)
                 transaction.set_rollback(True)
             else:
-                messages.success(request, self._get_success_message())
+                messages.success(request, self._get_success_message(outflow))
                 return redirect(self.success_url)
 
         return self._render(request, form, items_formset)
@@ -118,12 +119,13 @@ class OutflowCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
             if item.quantity > product.quantity:
                 form.add_error('quantity', f'Estoque insuficiente para {product}. Disponível: {product.quantity}.')
-                raise ValidationError('Não foi possível registrar a venda por falta de estoque.')
+                raise ValidationError('Não foi possível registrar a saída por falta de estoque.')
 
+            # Capturar preços do produto
             item.unit_cost = product.cost_price
-            if item.unit_price in (None, Decimal('0')):
-                item.unit_price = product.selling_price
+            item.unit_price = product.selling_price
 
+            # Reduzir estoque
             product.quantity -= item.quantity
             product.save(update_fields=['quantity'])
 
@@ -132,112 +134,22 @@ class OutflowCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
             saved = True
 
         if not saved:
-            raise ValidationError('Adicione ao menos um produto válido para a venda.')
+            raise ValidationError('Adicione ao menos um produto válido à saída.')
 
     def _render(self, request, form, items_formset):
-        form_data = getattr(form, 'data', None)
-        customer_id = None
-
-        if form_data and hasattr(form_data, 'get') and form_data.get('customer'):
-            customer_id = form_data.get('customer')
-        elif hasattr(form, 'initial') and form.initial.get('customer'):
-            customer_id = form.initial.get('customer')
-        selected_customer = None
-
-        if customer_id:
-            try:
-                customer = Customer.objects.filter(pk=customer_id).first()
-            except (TypeError, ValueError):
-                customer = None
-
-            if customer:
-                selected_customer = {
-                    'id': customer.id,
-                    'name': customer.full_name,
-                    'cpf': customer.formatted_cpf,
-                    'phone': customer.formatted_phone,
-                }
-
-        payment_methods_queryset = form.fields['payment_method'].queryset
-        payment_methods_data = [
-            {
-                'id': method.id,
-                'name': method.name,
-                'discount_percentage': str(method.discount_percentage),
-            }
-            for method in payment_methods_queryset
-        ]
-
         return render(
             request,
             self.template_name,
             {
                 'form': form,
                 'items_formset': items_formset,
-                'selected_customer': selected_customer,
-                'payment_methods_data': payment_methods_data,
+                'outflow_types': models.Outflow.OutflowType.choices,
             },
         )
 
-    def _get_success_message(self):
-        return 'Venda registrada com sucesso.'
-
-
-class PaymentMethodListView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """View para listar e criar métodos de pagamento - redireciona para app pos."""
-    template_name = 'payment_method_list.html'
-    permission_required = 'pos.view_paymentmethod'
-
-    def get(self, request, *args, **kwargs):
-        form = forms.PaymentMethodForm()
-        payment_methods = PaymentMethod.objects.all()
-        return self._render(request, form, payment_methods)
-
-    def post(self, request, *args, **kwargs):
-        action = request.POST.get('action', 'create')
-
-        if action == 'toggle':
-            if not request.user.has_perm('pos.change_paymentmethod'):
-                messages.error(request, 'Você não tem permissão para alterar métodos de pagamento.')
-                return redirect('payment_method_list')
-
-            method_id = request.POST.get('payment_method_id')
-            payment_method = PaymentMethod.objects.filter(pk=method_id).first()
-
-            if not payment_method:
-                messages.error(request, 'Método de pagamento não encontrado.')
-                return redirect('payment_method_list')
-
-            payment_method.is_active = not payment_method.is_active
-            payment_method.save(update_fields=['is_active', 'updated_at'])
-            status = 'ativado' if payment_method.is_active else 'desativado'
-            messages.success(request, f'Método "{payment_method.name}" {status} com sucesso.')
-            return redirect('payment_method_list')
-
-        if not request.user.has_perm('pos.add_paymentmethod'):
-            messages.error(request, 'Você não tem permissão para cadastrar métodos de pagamento.')
-            return redirect('payment_method_list')
-
-        form = forms.PaymentMethodForm(request.POST)
-        payment_methods = PaymentMethod.objects.all()
-
-        if form.is_valid():
-            payment_method = form.save()
-            messages.success(request, f'Método "{payment_method.name}" cadastrado com sucesso.')
-            return redirect('payment_method_list')
-
-        messages.error(request, 'Corrija os erros abaixo para continuar.')
-        return self._render(request, form, payment_methods)
-
-    def _render(self, request, form, payment_methods):
-        return render(
-            request,
-            self.template_name,
-            {
-                'form': form,
-                'payment_methods': payment_methods,
-            },
-        )
+    def _get_success_message(self, outflow):
+        type_label = outflow.get_outflow_type_display()
+        return f'Saída não faturada registrada com sucesso ({type_label}).'
 
 
 class OutflowDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
@@ -246,7 +158,7 @@ class OutflowDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
     permission_required = 'outflows.view_outflow'
 
     def get_queryset(self):
-        return super().get_queryset().select_related('customer', 'payment_method').prefetch_related(
+        return super().get_queryset().select_related('created_by').prefetch_related(
             Prefetch(
                 'items',
                 queryset=models.OutflowItem.objects.select_related('product__brand', 'product__category'),
@@ -257,34 +169,17 @@ class OutflowDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
         context = super().get_context_data(**kwargs)
         context['items'] = list(self.object.items.all())
         context['total_items'] = self.object.total_items
-        context['total_amount'] = self.object.total_amount
-        context['discount_amount'] = self.object.payment_discount_amount
-        context['final_amount'] = self.object.final_amount
         context['total_cost'] = self.object.total_cost
-        context['total_profit'] = self.object.total_profit
-        return context
-
-
-class OutflowReturnLandingView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
-    template_name = 'outflow_returns.html'
-    permission_required = 'outflows.view_outflow'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context.update(
-            {
-                'section_title': 'Trocas e Devoluções',
-                'section_description': 'Gerencie solicitações de troca e devolução vinculadas às vendas.',
-            },
-        )
+        context['total_value'] = self.object.total_value
+        context['impact_amount'] = self.object.impact_amount
         return context
 
 
 class OutflowCreateListAPIView(generics.ListCreateAPIView):
-    queryset = models.Outflow.objects.all().prefetch_related('items__product').select_related('customer', 'payment_method')
+    queryset = models.Outflow.objects.all().prefetch_related('items__product').select_related('created_by')
     serializer_class = serializers.OutflowSerializer
 
 
 class OutflowRetrieveAPIView(generics.RetrieveAPIView):
-    queryset = models.Outflow.objects.all().prefetch_related('items__product').select_related('customer', 'payment_method')
+    queryset = models.Outflow.objects.all().prefetch_related('items__product').select_related('created_by')
     serializer_class = serializers.OutflowSerializer

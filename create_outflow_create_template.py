@@ -1,4 +1,10 @@
-{% extends 'base.html' %}
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Script para criar o template outflow_create.html de forma confiável"""
+
+import os
+
+TEMPLATE_CONTENT = """{% extends 'base.html' %}
 
 {% block title %}SGE - Registrar Saída Não Faturada{% endblock %}
 
@@ -405,3 +411,25 @@
 </script>
 
 {% endblock %}
+"""
+
+def main():
+    template_path = os.path.join(
+        os.path.dirname(__file__),
+        'outflows',
+        'templates',
+        'outflow_create.html'
+    )
+    
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(template_path), exist_ok=True)
+    
+    # Write file with explicit mode
+    with open(template_path, 'w', encoding='utf-8') as f:
+        f.write(TEMPLATE_CONTENT)
+    
+    print(f"✅ Template criado com sucesso em: {template_path}")
+    print(f"📊 Tamanho do arquivo: {len(TEMPLATE_CONTENT)} bytes")
+
+if __name__ == '__main__':
+    main()
