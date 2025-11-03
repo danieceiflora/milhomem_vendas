@@ -315,12 +315,19 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function updateSummary() {
-    document.querySelector('[data-summary-subtotal]').textContent = formatCurrency(saleData.subtotal);
-    document.querySelector('[data-summary-discount]').textContent = formatCurrency(saleData.discount_total);
-    document.querySelector('[data-summary-total]').textContent = formatCurrency(saleData.total);
-    document.querySelector('[data-summary-paid]').textContent = formatCurrency(saleData.total_paid);
-    document.querySelector('[data-summary-change]').textContent = formatCurrency(saleData.change_total);
-    document.querySelector('[data-summary-remaining]').textContent = formatCurrency(saleData.remaining);
+    const summarySubtotal = document.querySelector('[data-summary-subtotal]');
+    const summaryDiscounts = document.querySelector('[data-summary-discounts]');
+    const summaryFees = document.querySelector('[data-summary-fees]');
+    const summaryTotal = document.querySelector('[data-summary-total]');
+    const summaryPaid = document.querySelector('[data-summary-paid]');
+    const summaryRemaining = document.querySelector('[data-summary-remaining]');
+    
+    if (summarySubtotal) summarySubtotal.textContent = formatCurrency(saleData.subtotal);
+    if (summaryDiscounts) summaryDiscounts.textContent = formatCurrency(saleData.discount_total || 0);
+    if (summaryFees) summaryFees.textContent = formatCurrency(saleData.fee_total || 0);
+    if (summaryTotal) summaryTotal.textContent = formatCurrency(saleData.total);
+    if (summaryPaid) summaryPaid.textContent = formatCurrency(saleData.total_paid);
+    if (summaryRemaining) summaryRemaining.textContent = formatCurrency(saleData.remaining);
   }
   
   // Busca de clientes
@@ -362,8 +369,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const customerId = btn.dataset.selectCustomer;
             try {
               const result = await apiCall('/pos/set-customer/', { customer_id: customerId });
-              customerName.textContent = result.sale.customer_name;
-              customerDetails.textContent = formatPhone(btn.querySelector('.text-xs').textContent.split(' · ')[1]);
+              
+              // Busca os dados do cliente selecionado
+              const customer = customers.find(c => c.id == customerId);
+              
+              if (customerName && customerDetails && customerSelected) {
+                customerName.textContent = result.sale.customer_name || customer.full_name;
+                customerDetails.textContent = formatPhone(customer.phone) || 'Telefone não informado';
+                customerSelected.classList.remove('hidden');
+              }
+              
               customerResults.classList.add('hidden');
               customerSearch.value = '';
             } catch (error) {

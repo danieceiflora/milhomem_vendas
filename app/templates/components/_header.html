@@ -1,20 +1,73 @@
 <header class="sticky top-0 z-30 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-  <div class="flex h-16 items-center justify-between px-4 md:px-6">
+  <div class="flex h-14 items-center justify-between px-4 md:px-6">
     <div class="flex items-center space-x-4">
-      <a href="{% url 'home' %}" class="flex items-center space-x-3 group">
+      <a href="{% url 'home' %}" class="flex items-center space-x-2 group">
         <div class="relative">
           <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
-          <div class="relative bg-gradient-to-r from-blue-600 to-purple-700 text-white p-2 rounded-lg">
-            <i data-lucide="package" class="w-6 h-6"></i>
+          <div class="relative bg-gradient-to-r from-blue-600 to-purple-700 text-white p-1.5 rounded-lg">
+            <i data-lucide="package" class="w-5 h-5"></i>
           </div>
         </div>
         <div class="hidden md:block">
-          <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
-            Sistema de Gestão de Estoque
+          <h1 class="text-lg font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">
+            {% block page_title %}{% endblock %}
           </h1>
-          <p class="text-xs text-muted-foreground">PINKMANIA - Controle Inteligente</p>
+          <p class="text-xs text-muted-foreground leading-none">{% block page_subtitle %}PINKMANIA{% endblock %}</p>
         </div>
       </a>
+    </div>
+    
+    <!-- Resumo PDV (apenas visível na página PDV) -->
+    <div class="hidden" id="pdv-summary-bar">
+      <div class="flex items-center gap-3 flex-wrap">
+        <!-- Subtotal -->
+        <div class="flex items-center space-x-1.5">
+          <i data-lucide="shopping-bag" class="h-3.5 w-3.5 text-muted-foreground"></i>
+          <div>
+            <p class="text-xs font-bold text-foreground" data-summary-subtotal>R$ 0,00</p>
+          </div>
+        </div>
+        
+        <div class="h-4 w-px bg-border/40"></div>
+        
+        <!-- Taxas -->
+        <div class="flex items-center space-x-1.5">
+          <i data-lucide="percent" class="h-3.5 w-3.5 text-orange-400"></i>
+          <p class="text-xs font-bold text-orange-400" data-summary-fees>R$ 0,00</p>
+        </div>
+        
+        <div class="h-4 w-px bg-border/40"></div>
+        
+        <!-- Descontos -->
+        <div class="flex items-center space-x-1.5">
+          <i data-lucide="badge-percent" class="h-3.5 w-3.5 text-green-400"></i>
+          <p class="text-xs font-bold text-green-400" data-summary-discounts>R$ 0,00</p>
+        </div>
+        
+        <div class="h-4 w-px bg-border/40"></div>
+        
+        <!-- Total -->
+        <div class="flex items-center space-x-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-md border border-primary/30">
+          <i class="h-4 w-4 text-primary"></i>
+          <p class="text-sm font-bold text-primary" data-summary-total>R$ 0,00</p>
+        </div>
+        
+        <div class="h-4 w-px bg-border/40"></div>
+        
+        <!-- Pago -->
+        <div class="flex items-center space-x-1.5">
+          <i data-lucide="wallet" class="h-3.5 w-3.5 text-blue-400"></i>
+          <p class="text-xs font-bold text-blue-400" data-summary-paid>R$ 0,00</p>
+        </div>
+        
+        <div class="h-4 w-px bg-border/40"></div>
+        
+        <!-- Restante -->
+        <div class="flex items-center space-x-1.5">
+          <i data-lucide="alert-circle" class="h-3.5 w-3.5 text-red-400"></i>
+          <p class="text-xs font-bold text-red-400" data-summary-remaining>R$ 0,00</p>
+        </div>
+      </div>
     </div>
     
     {% if user.is_authenticated %}
