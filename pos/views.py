@@ -35,6 +35,8 @@ class POSNewView(LoginRequiredMixin, View):
             user=request.user,
             session_key=session_key
         )
+        # Garante que os totais estejam recalculados antes de serializar
+        sale = services.recalc_totals(sale)
         
         # Serializa dados para o template
         serializer = SaleSerializer(sale)

@@ -58,7 +58,6 @@ INSTALLED_APPS = [
     'products',
     'inflows',
     'customers',
-    'outflows',
     'ai',
     'pos',
 ]

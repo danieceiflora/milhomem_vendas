@@ -40,7 +40,6 @@ class PaymentMethod(models.Model):
         ordering = ['name']
         verbose_name = 'Método de pagamento'
         verbose_name_plural = 'Métodos de pagamento'
-        db_table = 'outflows_paymentmethod'  # Manter o nome da tabela existente
 
     def __str__(self) -> str:
         fee_type = "↓" if self.fee_payer == self.FeePayerType.MERCHANT else "↑"
@@ -152,14 +151,29 @@ class Sale(models.Model):
     
     @property
     def fee_total(self) -> Decimal:
-        """Retorna o total de taxas aplicadas aos pagamentos (acréscimos do cliente)."""
-        total_fees = Decimal('0')
-        for payment in self.payments.all():
+        """Retorna o total de taxas aplicadas aos pagamentos (acréscimos do cliente).
+
+        A taxa é calculada UMA VEZ sobre o valor base da venda (subtotal - desconto)
+        usando a maior porcentagem entre os métodos de pagamento que cobram o cliente.
+        Isso mantém consistência com `recalc_totals()` e evita recursão quando o
+        valor do pagamento já inclui a taxa.
+        """
+        # Valor base (subtotal - desconto)
+        base_value = (self.subtotal - self.discount_total).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+        base_value = max(Decimal('0'), base_value)
+
+        # Encontra a maior taxa entre os métodos de pagamento que cobram o cliente
+        max_fee_percentage = Decimal('0')
+        for payment in self.payments.select_related('payment_method').all():
             if payment.payment_method.fee_payer == PaymentMethod.FeePayerType.CUSTOMER:
-                # Cliente paga: acréscimo sobre o valor aplicado
-                fee = payment.amount_applied * (payment.payment_method.fee_percentage / 100)
-                total_fees += fee
-        return total_fees.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                if payment.payment_method.fee_percentage > max_fee_percentage:
+                    max_fee_percentage = payment.payment_method.fee_percentage
+
+        if max_fee_percentage > 0 and base_value > 0:
+            fee_total = (base_value * (max_fee_percentage / 100)).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+            return fee_total
+
+        return Decimal('0')
     
     @property
     def change_total(self) -> Decimal:

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load l10n %}
 
 {% block title %}PDV - Ponto de Venda{% endblock %}
 
@@ -69,7 +70,7 @@
           <option 
             value="{{ pm.id }}" 
             data-name="{{ pm.name }}"
-            data-fee-percentage="{{ pm.fee_percentage }}"
+            data-fee-percentage="{{ pm.fee_percentage|unlocalize }}"
             data-fee-payer="{{ pm.fee_payer }}"
           >
             {{ pm.name }}

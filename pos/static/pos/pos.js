@@ -584,10 +584,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const methodId = e.target.value;
     const selectedOption = e.target.options[e.target.selectedIndex];
     const methodName = selectedOption?.dataset.name || '';
-    const feePercentage = parseFloat(selectedOption?.dataset.feePercentage || '0');
+    const feePercentageRaw = selectedOption?.dataset.feePercentage || '0';
+    const feePercentage = parseFloat(feePercentageRaw);
     const feePayer = selectedOption?.dataset.feePayer || '';
     
-    console.log('Método selecionado:', { methodId, methodName, feePercentage, feePayer });
+    console.log('Método selecionado:', { 
+      methodId, 
+      methodName, 
+      feePercentageRaw, 
+      feePercentage, 
+      feePayer 
+    });
     
     if (!methodId) {
       cashFields.classList.add('hidden');
