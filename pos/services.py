@@ -229,6 +229,14 @@ def recalc_totals(sale: Sale) -> Sale:
     Recalcula todos os totais da venda baseado nos itens e pagamentos.
     Atualiza: subtotal, total, total_paid.
     NÃO altera discount_total (apenas em finalize).
+    
+    O total considera:
+    - Subtotal (soma dos itens)
+    - Menos descontos manuais (discount_total)
+    - Mais taxas de pagamento pagas pelo cliente (fee_total)
+    
+    IMPORTANTE: A taxa é calculada sobre o SUBTOTAL-DESCONTO, uma única vez,
+    se houver pelo menos um pagamento com taxa paga pelo cliente.
     """
     # Calcula subtotal dos itens
     subtotal = sum(
@@ -236,8 +244,27 @@ def recalc_totals(sale: Sale) -> Sale:
         Decimal('0')
     )
     
-    # Total = subtotal - desconto
-    total = (subtotal - sale.discount_total).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    # Valor base para cálculo de taxas (subtotal - desconto)
+    base_value = (subtotal - sale.discount_total).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    base_value = max(Decimal('0'), base_value)
+    
+    # Calcula taxas de pagamento pagas pelo cliente
+    # A taxa é aplicada UMA VEZ sobre o valor base, usando a maior taxa dentre os métodos
+    fee_total = Decimal('0')
+    max_fee_percentage = Decimal('0')
+    
+    for payment in sale.payments.select_related('payment_method').all():
+        if payment.payment_method.fee_payer == PaymentMethod.FeePayerType.CUSTOMER:
+            # Encontra a maior taxa
+            if payment.payment_method.fee_percentage > max_fee_percentage:
+                max_fee_percentage = payment.payment_method.fee_percentage
+    
+    # Aplica a maior taxa sobre o valor base
+    if max_fee_percentage > 0 and base_value > 0:
+        fee_total = (base_value * (max_fee_percentage / 100)).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    
+    # Total = subtotal - desconto + taxa
+    total = (subtotal - sale.discount_total + fee_total).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
     total = max(Decimal('0'), total)
     
     # Total pago = soma dos pagamentos aplicados

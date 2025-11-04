@@ -24,6 +24,7 @@
         <div class="flex items-center space-x-1.5">
           <i data-lucide="shopping-bag" class="h-3.5 w-3.5 text-muted-foreground"></i>
           <div>
+            <p class="text-[10px] text-muted-foreground uppercase tracking-wide leading-none">Subtotal</p>
             <p class="text-xs font-bold text-foreground" data-summary-subtotal>R$ 0,00</p>
           </div>
         </div>
@@ -33,7 +34,10 @@
         <!-- Taxas -->
         <div class="flex items-center space-x-1.5">
           <i data-lucide="percent" class="h-3.5 w-3.5 text-orange-400"></i>
-          <p class="text-xs font-bold text-orange-400" data-summary-fees>R$ 0,00</p>
+          <div>
+            <p class="text-[10px] text-orange-300/80 uppercase tracking-wide leading-none">Taxas</p>
+            <p class="text-xs font-bold text-orange-400" data-summary-fees>R$ 0,00</p>
+          </div>
         </div>
         
         <div class="h-4 w-px bg-border/40"></div>
@@ -41,15 +45,21 @@
         <!-- Descontos -->
         <div class="flex items-center space-x-1.5">
           <i data-lucide="badge-percent" class="h-3.5 w-3.5 text-green-400"></i>
-          <p class="text-xs font-bold text-green-400" data-summary-discounts>R$ 0,00</p>
+          <div>
+            <p class="text-[10px] text-green-300/80 uppercase tracking-wide leading-none">Descontos</p>
+            <p class="text-xs font-bold text-green-400" data-summary-discounts>R$ 0,00</p>
+          </div>
         </div>
         
         <div class="h-4 w-px bg-border/40"></div>
         
         <!-- Total -->
         <div class="flex items-center space-x-1.5 px-2.5 py-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-md border border-primary/30">
-          <i class="h-4 w-4 text-primary"></i>
-          <p class="text-sm font-bold text-primary" data-summary-total>R$ 0,00</p>
+          <i data-lucide="dollar-sign" class="h-4 w-4 text-primary"></i>
+          <div>
+            <p class="text-[10px] text-primary/80 uppercase tracking-wide leading-none">Total</p>
+            <p class="text-sm font-bold text-primary" data-summary-total>R$ 0,00</p>
+          </div>
         </div>
         
         <div class="h-4 w-px bg-border/40"></div>
@@ -57,7 +67,10 @@
         <!-- Pago -->
         <div class="flex items-center space-x-1.5">
           <i data-lucide="wallet" class="h-3.5 w-3.5 text-blue-400"></i>
-          <p class="text-xs font-bold text-blue-400" data-summary-paid>R$ 0,00</p>
+          <div>
+            <p class="text-[10px] text-blue-300/80 uppercase tracking-wide leading-none">Pago</p>
+            <p class="text-xs font-bold text-blue-400" data-summary-paid>R$ 0,00</p>
+          </div>
         </div>
         
         <div class="h-4 w-px bg-border/40"></div>
@@ -65,7 +78,10 @@
         <!-- Restante -->
         <div class="flex items-center space-x-1.5">
           <i data-lucide="alert-circle" class="h-3.5 w-3.5 text-red-400"></i>
-          <p class="text-xs font-bold text-red-400" data-summary-remaining>R$ 0,00</p>
+          <div>
+            <p class="text-[10px] text-red-300/80 uppercase tracking-wide leading-none">Restante</p>
+            <p class="text-xs font-bold text-red-400" data-summary-remaining>R$ 0,00</p>
+          </div>
         </div>
       </div>
     </div>

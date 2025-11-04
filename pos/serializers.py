@@ -34,6 +34,7 @@ class SaleSerializer(serializers.ModelSerializer):
     payments = SalePaymentSerializer(many=True, read_only=True)
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     items_count = serializers.IntegerField(read_only=True)
+    fee_total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     change_total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     remaining = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     overpaid = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
@@ -42,7 +43,7 @@ class SaleSerializer(serializers.ModelSerializer):
         model = Sale
         fields = [
             'id', 'customer', 'customer_name', 'user', 'status',
-            'subtotal', 'discount_total', 'total', 'total_paid',
+            'subtotal', 'discount_total', 'fee_total', 'total', 'total_paid',
             'items_count', 'change_total', 'remaining', 'overpaid',
             'notes', 'created_at', 'updated_at', 'finalized_at',
             'items', 'payments'

@@ -52,7 +52,11 @@ document.addEventListener('DOMContentLoaded', function() {
     productSearch: !!productSearch,
     productResults: !!productResults,
     itemsContainer: !!itemsContainer,
-    paymentsContainer: !!paymentsContainer
+    paymentsContainer: !!paymentsContainer,
+    paymentMethodSelect: !!paymentMethodSelect,
+    addPaymentBtn: !!addPaymentBtn,
+    cashFields: !!cashFields,
+    otherFields: !!otherFields
   });
   
   // Formatador de moeda
@@ -315,19 +319,73 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   function updateSummary() {
-    const summarySubtotal = document.querySelector('[data-summary-subtotal]');
-    const summaryDiscounts = document.querySelector('[data-summary-discounts]');
-    const summaryFees = document.querySelector('[data-summary-fees]');
-    const summaryTotal = document.querySelector('[data-summary-total]');
-    const summaryPaid = document.querySelector('[data-summary-paid]');
-    const summaryRemaining = document.querySelector('[data-summary-remaining]');
+    const summarySubtotal = document.querySelectorAll('[data-summary-subtotal]');
+    const summaryDiscounts = document.querySelectorAll('[data-summary-discounts]');
+    const summaryFees = document.querySelectorAll('[data-summary-fees]');
+    const summaryTotal = document.querySelectorAll('[data-summary-total]');
+    const summaryPaid = document.querySelectorAll('[data-summary-paid]');
+    const summaryRemaining = document.querySelectorAll('[data-summary-remaining]');
     
-    if (summarySubtotal) summarySubtotal.textContent = formatCurrency(saleData.subtotal);
-    if (summaryDiscounts) summaryDiscounts.textContent = formatCurrency(saleData.discount_total || 0);
-    if (summaryFees) summaryFees.textContent = formatCurrency(saleData.fee_total || 0);
-    if (summaryTotal) summaryTotal.textContent = formatCurrency(saleData.total);
-    if (summaryPaid) summaryPaid.textContent = formatCurrency(saleData.total_paid);
-    if (summaryRemaining) summaryRemaining.textContent = formatCurrency(saleData.remaining);
+    // Atualiza todos os elementos com data-summary-subtotal (header e outros)
+    summarySubtotal.forEach(el => el.textContent = formatCurrency(saleData.subtotal));
+    summaryDiscounts.forEach(el => el.textContent = formatCurrency(saleData.discount_total || 0));
+    summaryFees.forEach(el => el.textContent = formatCurrency(saleData.fee_total || 0));
+    summaryTotal.forEach(el => el.textContent = formatCurrency(saleData.total));
+    summaryPaid.forEach(el => el.textContent = formatCurrency(saleData.total_paid));
+    summaryRemaining.forEach(el => el.textContent = formatCurrency(saleData.remaining));
+  }
+  
+  function updateSummaryWithPotentialFee(feePercentage, feePayer) {
+    // Calcula e mostra a taxa potencial quando um método é selecionado
+    const summaryFees = document.querySelectorAll('[data-summary-fees]');
+    const summaryTotal = document.querySelectorAll('[data-summary-total]');
+    const summaryRemaining = document.querySelectorAll('[data-summary-remaining]');
+    
+    let potentialFee = 0;
+    let newTotal = parseFloat(saleData.total) || 0;
+    let newRemaining = parseFloat(saleData.remaining) || 0;
+    
+    // Calcula valor base (subtotal - desconto)
+    const baseValue = (parseFloat(saleData.subtotal) || 0) - (parseFloat(saleData.discount_total) || 0);
+    
+    if (feePercentage > 0 && feePayer === 'customer' && baseValue > 0) {
+      // Calcula taxa sobre o valor base da venda
+      potentialFee = baseValue * (feePercentage / 100);
+      newTotal = newTotal + potentialFee;
+      newRemaining = newTotal - (parseFloat(saleData.total_paid) || 0);
+    }
+    
+    // Atualiza com valores potenciais (temporários)
+    summaryFees.forEach(el => {
+      const currentFee = parseFloat(saleData.fee_total) || 0;
+      const totalFee = currentFee + potentialFee;
+      el.textContent = formatCurrency(totalFee);
+      
+      // Adiciona indicador visual de que é uma previsão
+      if (potentialFee > 0) {
+        el.classList.add('animate-pulse');
+      } else {
+        el.classList.remove('animate-pulse');
+      }
+    });
+    
+    summaryTotal.forEach(el => {
+      el.textContent = formatCurrency(newTotal);
+      if (potentialFee > 0) {
+        el.classList.add('animate-pulse');
+      } else {
+        el.classList.remove('animate-pulse');
+      }
+    });
+    
+    summaryRemaining.forEach(el => {
+      el.textContent = formatCurrency(newRemaining);
+      if (potentialFee > 0) {
+        el.classList.add('animate-pulse');
+      } else {
+        el.classList.remove('animate-pulse');
+      }
+    });
   }
   
   // Busca de clientes
@@ -526,23 +584,48 @@ document.addEventListener('DOMContentLoaded', function() {
     const methodId = e.target.value;
     const selectedOption = e.target.options[e.target.selectedIndex];
     const methodName = selectedOption?.dataset.name || '';
-    const chargePercentage = parseFloat(selectedOption?.dataset.chargePercentage || '0');
+    const feePercentage = parseFloat(selectedOption?.dataset.feePercentage || '0');
+    const feePayer = selectedOption?.dataset.feePayer || '';
+    
+    console.log('Método selecionado:', { methodId, methodName, feePercentage, feePayer });
     
     if (!methodId) {
       cashFields.classList.add('hidden');
       otherFields.classList.add('hidden');
       addPaymentBtn.disabled = true;
+      // Restaura valores originais no resumo
+      updateSummary();
       return;
     }
     
     const isCash = methodName.toLowerCase().includes('dinheiro');
     
     // Calcula valor com taxa se cliente paga
-    let remainingWithFee = saleData.remaining || 0;
-    if (chargePercentage > 0 && remainingWithFee > 0) {
-      // Adiciona taxa ao valor restante
-      const fee = remainingWithFee * (chargePercentage / 100);
-      remainingWithFee = remainingWithFee + fee;
+    // A taxa é calculada sobre o SUBTOTAL - DESCONTO (valor base da venda)
+    const baseValue = (parseFloat(saleData.subtotal) || 0) - (parseFloat(saleData.discount_total) || 0);
+    let remainingWithFee = parseFloat(saleData.remaining) || 0;
+    let feeAmount = 0;
+    
+    console.log('Valores:', { 
+      subtotal: saleData.subtotal, 
+      discount: saleData.discount_total, 
+      baseValue, 
+      remaining: saleData.remaining 
+    });
+    
+    if (feePercentage > 0 && feePayer === 'customer' && baseValue > 0) {
+      // Cliente paga a taxa - calculada sobre o valor base da venda
+      feeAmount = baseValue * (feePercentage / 100);
+      // O valor a pagar é o restante + taxa
+      remainingWithFee = remainingWithFee + feeAmount;
+      
+      console.log('Calculando taxa:', { feeAmount, remainingWithFee });
+      
+      // Atualiza resumo com valores potenciais
+      updateSummaryWithPotentialFee(feePercentage, feePayer);
+    } else {
+      // Restaura valores originais no resumo
+      updateSummary();
     }
     
     if (isCash) {
@@ -553,13 +636,28 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       cashFields.classList.add('hidden');
       otherFields.classList.remove('hidden');
+      
       // Preenche com valor + taxa (se houver)
       paymentAmount.value = remainingWithFee.toFixed(2);
       
       // Mostra aviso se há taxa
-      if (chargePercentage > 0) {
-        const feeAmount = (remainingWithFee - saleData.remaining).toFixed(2);
-        paymentAmount.title = `Valor original: R$ ${saleData.remaining.toFixed(2)} + Taxa ${chargePercentage}%: R$ ${feeAmount}`;
+      if (feePercentage > 0 && feePayer === 'customer') {
+        const originalValue = parseFloat(saleData.remaining).toFixed(2);
+        const feeValue = feeAmount.toFixed(2);
+        const totalWithFee = remainingWithFee.toFixed(2);
+        paymentAmount.title = `Valor da venda: R$ ${originalValue}\nTaxa ${feePercentage}%: R$ ${feeValue}\nTotal a pagar: R$ ${totalWithFee}`;
+        
+        // Adiciona visual feedback
+        paymentAmount.classList.add('border-orange-500', 'bg-orange-500/10');
+        
+        // Remove classes depois que o usuário focar
+        paymentAmount.addEventListener('focus', function removeFeedback() {
+          this.classList.remove('border-orange-500', 'bg-orange-500/10');
+          this.removeEventListener('focus', removeFeedback);
+        });
+      } else {
+        paymentAmount.title = '';
+        paymentAmount.classList.remove('border-orange-500', 'bg-orange-500/10');
       }
       
       paymentAmount.focus();
@@ -604,6 +702,11 @@ document.addEventListener('DOMContentLoaded', function() {
       cashFields.classList.add('hidden');
       otherFields.classList.add('hidden');
       addPaymentBtn.disabled = true;
+      
+      // Remove animação pulse dos valores (se houver)
+      document.querySelectorAll('[data-summary-fees], [data-summary-total], [data-summary-remaining]').forEach(el => {
+        el.classList.remove('animate-pulse');
+      });
     } catch (error) {
       alert('Erro ao adicionar pagamento: ' + error.message);
     }

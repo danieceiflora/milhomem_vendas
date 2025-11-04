@@ -151,6 +151,17 @@ class Sale(models.Model):
         return self.items.aggregate(total=models.Sum('quantity'))['total'] or 0
     
     @property
+    def fee_total(self) -> Decimal:
+        """Retorna o total de taxas aplicadas aos pagamentos (acréscimos do cliente)."""
+        total_fees = Decimal('0')
+        for payment in self.payments.all():
+            if payment.payment_method.fee_payer == PaymentMethod.FeePayerType.CUSTOMER:
+                # Cliente paga: acréscimo sobre o valor aplicado
+                fee = payment.amount_applied * (payment.payment_method.fee_percentage / 100)
+                total_fees += fee
+        return total_fees.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+    
+    @property
     def change_total(self) -> Decimal:
         """Retorna o troco total dado em todos os pagamentos."""
         return self.payments.aggregate(
