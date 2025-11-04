@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recibo #{{ sale.id }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            background: #fff;
+            padding: 10px;
+            max-width: 302px; /* ~80mm */
+            margin: 0 auto;
+        }
+
+        .receipt {
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #000;
+        }
+
+        .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .non-fiscal {
+            font-size: 10px;
+            margin-top: 8px;
+            padding: 3px;
+            border: 1px solid #000;
+            display: inline-block;
+        }
+
+        .info-section {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #000;
+        }
+
+        .info-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 11px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+
+        .items-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+            padding-bottom: 3px;
+            border-bottom: 1px solid #000;
+        }
+
+        .item {
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+
+        .item-name {
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .item-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+        }
+
+        .totals {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #000;
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .total-line.main {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 5px;
+            padding-top: 5px;
+            border-top: 1px dashed #000;
+        }
+
+        .payments {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+        }
+
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 11px;
+        }
+
+        .footer {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px dashed #000;
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .timestamp {
+            margin-top: 5px;
+            font-size: 9px;
+        }
+
+        .separator {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 10px;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+
+            @page {
+                size: 80mm auto;
+                margin: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        /* Print button */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .print-button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="window.print()" class="print-button no-print">🖨️ Imprimir</button>
+
+    <div class="receipt">
+        <!-- Header -->
+        <div class="header">
+            <div class="company-name">PINKMANIA</div>
+            <div style="font-size: 10px;">Sistema de Gestão de Vendas</div>
+            <div class="non-fiscal">*** RECIBO NÃO FISCAL ***</div>
+        </div>
+
+        <!-- Sale Info -->
+        <div class="info-section">
+            <div class="info-line">
+                <span class="label">Venda:</span>
+                <span>#{{ sale.id }}</span>
+            </div>
+            <div class="info-line">
+                <span class="label">Data:</span>
+                <span>{{ sale.finalized_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="info-line">
+                <span class="label">Cliente:</span>
+                <span>{{ sale.customer.full_name }}</span>
+            </div>
+            {% if sale.customer.phone %}
+            <div class="info-line">
+                <span class="label">Telefone:</span>
+                <span>{{ sale.customer.formatted_phone }}</span>
+            </div>
+            {% endif %}
+            <div class="info-line">
+                <span class="label">Vendedor:</span>
+                <span>{{ sale.user.get_full_name|default:sale.user.username }}</span>
+            </div>
+        </div>
+
+        <!-- Items -->
+        <div class="items-section">
+            <div class="items-header">ITENS DA VENDA</div>
+            {% for item in sale.items.all %}
+            <div class="item">
+                <div class="item-name">{{ item.product.title }}</div>
+                <div class="item-details">
+                    <span>{{ item.quantity }} x R$ {{ item.unit_price|floatformat:2 }}</span>
+                    <span>R$ {{ item.line_total|floatformat:2 }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Totals -->
+        <div class="totals">
+            <div class="total-line">
+                <span>Subtotal:</span>
+                <span>R$ {{ sale.subtotal|floatformat:2 }}</span>
+            </div>
+            {% if sale.discount_total > 0 %}
+            <div class="total-line">
+                <span>Descontos:</span>
+                <span>- R$ {{ sale.discount_total|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if sale.fee_total > 0 %}
+            <div class="total-line">
+                <span>Taxas:</span>
+                <span>+ R$ {{ sale.fee_total|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="total-line main">
+                <span>TOTAL:</span>
+                <span>R$ {{ sale.total|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <!-- Payments -->
+        <div class="payments">
+            <div class="items-header">PAGAMENTOS</div>
+            {% for payment in sale.payments.all %}
+            <div class="payment-item">
+                <span>{{ payment.payment_method.name }}</span>
+                <span>R$ {{ payment.amount_applied|floatformat:2 }}</span>
+            </div>
+            {% if payment.change_given > 0 %}
+            <div class="payment-item" style="font-size: 10px; margin-left: 10px;">
+                <span>Troco:</span>
+                <span>R$ {{ payment.change_given|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+            <div class="total-line" style="margin-top: 8px; padding-top: 5px; border-top: 1px dashed #000;">
+                <span>Total Pago:</span>
+                <span>R$ {{ sale.total_paid|floatformat:2 }}</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="separator">═══════════════════════════</div>
+            <div>Obrigado pela preferência!</div>
+            <div class="timestamp">
+                Emitido em: {{ now|date:"d/m/Y H:i:s" }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-print quando for aberto em nova janela
+        if (window.location.search.includes('autoprint=1')) {
+            window.onload = function() {
+                setTimeout(function() {
+                    window.print();
+                }, 500);
+            };
+        }
+    </script>
+</body>
+</html>

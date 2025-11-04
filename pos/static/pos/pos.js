@@ -730,6 +730,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const result = await apiCall('/pos/finalize/', {});
       
       if (result.success) {
+        // Armazena o ID da venda para impressão
+        window.lastSaleId = result.sale_id;
+        
         successModal.classList.remove('hidden');
         successModal.classList.add('flex');
       } else if (result.requires_resolution) {
@@ -737,6 +740,16 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     } catch (error) {
       alert('Erro ao finalizar venda: ' + error.message);
+    }
+  });
+  
+  // Botão de imprimir recibo no modal de sucesso
+  const printReceiptBtn = document.querySelector('[data-print-receipt]');
+  printReceiptBtn?.addEventListener('click', () => {
+    if (window.lastSaleId) {
+      // Abre o recibo em nova aba/janela com autoprint
+      const url = `/pos/sales/${window.lastSaleId}/receipt/?autoprint=1`;
+      window.open(url, '_blank', 'width=400,height=600');
     }
   });
   

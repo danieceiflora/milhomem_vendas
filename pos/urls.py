@@ -12,6 +12,7 @@ urlpatterns = [
     # Listagem e detalhes de vendas
     path('sales/', views.SaleListView.as_view(), name='sale_list'),
     path('sales/<int:pk>/', views.SaleDetailView.as_view(), name='sale_detail'),
+    path('sales/<int:pk>/receipt/', views.SaleReceiptView.as_view(), name='sale_receipt'),
     
     # Métodos de pagamento
     path('payment-methods/', views.PaymentMethodListView.as_view(), name='payment_method_list'),

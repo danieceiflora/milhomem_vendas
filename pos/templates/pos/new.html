@@ -232,13 +232,24 @@
     </div>
     <h3 class="text-xl font-bold mb-2">Venda Finalizada!</h3>
     <p class="text-muted-foreground mb-6">A venda foi registrada com sucesso.</p>
-    <button
-      type="button"
-      class="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium"
-      onclick="window.location.reload()"
-    >
-      Nova Venda
-    </button>
+    
+    <div class="flex flex-col gap-3">
+      <button
+        type="button"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2"
+        data-print-receipt
+      >
+        <i data-lucide="printer" class="h-5 w-5"></i>
+        Imprimir Recibo
+      </button>
+      <button
+        type="button"
+        class="w-full bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium"
+        onclick="window.location.reload()"
+      >
+        Nova Venda
+      </button>
+    </div>
   </div>
 </div>
 

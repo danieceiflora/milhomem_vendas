@@ -461,3 +461,27 @@ class PaymentMethodUpdateView(LoginRequiredMixin, View):
         messages.error(request, 'Corrija os erros abaixo para continuar.')
         return render(request, self.template_name, {'form': form, 'payment_method': payment_method})
 
+
+class SaleReceiptView(LoginRequiredMixin, View):
+    """View para gerar o recibo não-fiscal de uma venda."""
+    template_name = 'pos/receipt.html'
+
+    def get(self, request, pk):
+        sale = get_object_or_404(
+            Sale.objects.prefetch_related('items__product', 'payments__payment_method'),
+            pk=pk
+        )
+        
+        # Apenas vendas finalizadas podem ter recibo
+        if sale.status != Sale.Status.FINALIZED:
+            messages.warning(request, 'Apenas vendas finalizadas podem ter recibo impresso.')
+            return redirect('pos:new')
+        
+        from django.utils import timezone
+        context = {
+            'sale': sale,
+            'now': timezone.now(),
+        }
+        
+        return render(request, self.template_name, context)
+
