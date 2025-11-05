@@ -1,17 +1,18 @@
 from decimal import Decimal
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views import View
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 from django.http import JsonResponse
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 import json
 
-from . import services, forms
-from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
+from . import services, forms, return_services
+from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod, Return, ReturnItem
 from .serializers import (
     SaleSerializer, SaleItemSerializer, SalePaymentSerializer,
     LedgerEntrySerializer
@@ -485,3 +486,320 @@ class SaleReceiptView(LoginRequiredMixin, View):
         
         return render(request, self.template_name, context)
 
+
+# ============================================================================
+# VIEWS DE DEVOLUÇÃO
+# ============================================================================
+
+class ReturnListView(UserPassesTestMixin, ListView):
+    """Lista todas as devoluções (apenas para staff)."""
+    model = Return
+    template_name = 'pos/return_list.html'
+    context_object_name = 'returns'
+    paginate_by = 20
+    
+    def test_func(self):
+        """Apenas usuários staff podem acessar."""
+        return self.request.user.is_staff
+    
+    def get_queryset(self):
+        queryset = Return.objects.select_related(
+            'original_sale', 'customer', 'user', 'approved_by'
+        ).prefetch_related('items')
+        
+        # Filtros
+        status = self.request.GET.get('status')
+        refund_method = self.request.GET.get('refund_method')
+        search = self.request.GET.get('search')
+        
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        if refund_method:
+            queryset = queryset.filter(refund_method=refund_method)
+        
+        if search:
+            queryset = queryset.filter(
+                Q(customer__full_name__icontains=search) |
+                Q(reason__icontains=search) |
+                Q(original_sale__id__icontains=search)
+            )
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Estatísticas
+        from django.db import models as db_models
+        stats = Return.objects.aggregate(
+            total_pending=Sum('total_amount', filter=Q(status=Return.Status.PENDING)),
+            total_completed=Sum('total_amount', filter=Q(status=Return.Status.COMPLETED)),
+            count_pending=db_models.Count('id', filter=Q(status=Return.Status.PENDING)),
+            count_completed=db_models.Count('id', filter=Q(status=Return.Status.COMPLETED)),
+        )
+        
+        context['stats'] = stats
+        context['status_choices'] = Return.Status.choices
+        context['refund_method_choices'] = Return.RefundMethod.choices
+        
+        return context
+
+
+class ReturnDetailView(UserPassesTestMixin, DetailView):
+    """Visualiza detalhes de uma devolução (apenas para staff)."""
+    model = Return
+    template_name = 'pos/return_detail.html'
+    context_object_name = 'return_obj'
+    
+    def test_func(self):
+        """Apenas usuários staff podem acessar."""
+        return self.request.user.is_staff
+    
+    def get_queryset(self):
+        return Return.objects.select_related(
+            'original_sale', 'customer', 'user', 'approved_by', 'ledger_entry'
+        ).prefetch_related('items__product', 'items__sale_item')
+
+
+class ReturnCreateView(UserPassesTestMixin, View):
+    """Cria uma nova devolução para uma venda (apenas para staff)."""
+    template_name = 'pos/return_create.html'
+    
+    def test_func(self):
+        """Apenas usuários staff podem acessar."""
+        return self.request.user.is_staff
+    
+    def get(self, request, sale_pk):
+        sale = get_object_or_404(
+            Sale.objects.prefetch_related('items__product', 'items__return_items__return_instance'),
+            pk=sale_pk
+        )
+        
+        # Validar se a venda pode ter devolução
+        if sale.status not in [Sale.Status.FINALIZED, Sale.Status.PARTIALLY_RETURNED]:
+            messages.error(request, 'Apenas vendas finalizadas ou parcialmente devolvidas podem ter devoluções.')
+            return redirect('pos:sale_detail', pk=sale_pk)
+        
+        # Preparar dados dos itens com quantidades disponíveis
+        items_data = []
+        for item in sale.items.all():
+            # Calcular quantidade já devolvida
+            already_returned = sum(
+                ri.quantity
+                for ri in item.return_items.filter(
+                    return_instance__status__in=[Return.Status.APPROVED, Return.Status.COMPLETED]
+                )
+            )
+            available = item.quantity - already_returned
+            
+            if available > 0:
+                items_data.append({
+                    'item': item,
+                    'already_returned': already_returned,
+                    'available': available
+                })
+        
+        if not items_data:
+            messages.warning(request, 'Todos os itens desta venda já foram devolvidos.')
+            return redirect('pos:sale_detail', pk=sale_pk)
+        
+        context = {
+            'sale': sale,
+            'items_data': items_data,
+            'refund_method_choices': Return.RefundMethod.choices,
+        }
+        
+        return render(request, self.template_name, context)
+    
+    def post(self, request, sale_pk):
+        sale = get_object_or_404(Sale, pk=sale_pk)
+        
+        try:
+            # Coletar dados do formulário
+            reason = request.POST.get('reason', '').strip()
+            refund_method = request.POST.get('refund_method', Return.RefundMethod.CREDIT)
+            notes = request.POST.get('notes', '').strip()
+            
+            if not reason:
+                raise return_services.ReturnValidationError('O motivo da devolução é obrigatório.')
+            
+            # Coletar itens selecionados
+            items_data = []
+            for key in request.POST:
+                if key.startswith('item_'):
+                    sale_item_id = key.replace('item_', '')
+                    quantity_str = request.POST.get(key)
+                    
+                    if quantity_str:
+                        try:
+                            quantity = int(quantity_str)
+                            if quantity > 0:
+                                items_data.append({
+                                    'sale_item_id': int(sale_item_id),
+                                    'quantity': quantity
+                                })
+                        except ValueError:
+                            continue
+            
+            # Criar devolução
+            return_instance = return_services.create_return(
+                sale=sale,
+                items_data=items_data,
+                reason=reason,
+                refund_method=refund_method,
+                user=request.user,
+                notes=notes
+            )
+            
+            messages.success(
+                request,
+                f'Devolução #{return_instance.pk} criada com sucesso! '
+                f'Aguardando aprovação.'
+            )
+            return redirect('pos:return_detail', pk=return_instance.pk)
+            
+        except return_services.ReturnValidationError as e:
+            messages.error(request, str(e))
+            return redirect('pos:return_create', sale_pk=sale_pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def return_approve_view(request, pk):
+    """Aprova uma devolução (apenas para staff)."""
+    if not request.user.is_staff:
+        messages.error(request, 'Apenas gerentes podem aprovar devoluções.')
+        return redirect('pos:return_detail', pk=pk)
+    
+    return_instance = get_object_or_404(Return, pk=pk)
+    
+    try:
+        return_services.approve_return(return_instance, request.user)
+        messages.success(request, f'Devolução #{return_instance.pk} aprovada com sucesso!')
+    except return_services.ReturnValidationError as e:
+        messages.error(request, str(e))
+    
+    return redirect('pos:return_detail', pk=pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def return_complete_view(request, pk):
+    """Completa uma devolução aprovada (atualiza estoque e gera crédito)."""
+    if not request.user.is_staff:
+        messages.error(request, 'Apenas gerentes podem completar devoluções.')
+        return redirect('pos:return_detail', pk=pk)
+    
+    return_instance = get_object_or_404(Return, pk=pk)
+    
+    try:
+        return_services.complete_return(return_instance)
+        messages.success(
+            request,
+            f'Devolução #{return_instance.pk} concluída! '
+            f'Estoque atualizado e crédito gerado.'
+        )
+    except return_services.ReturnValidationError as e:
+        messages.error(request, str(e))
+    
+    return redirect('pos:return_detail', pk=pk)
+
+
+@login_required
+@require_http_methods(['POST'])
+def return_reject_view(request, pk):
+    """Rejeita uma devolução (apenas para staff)."""
+    if not request.user.is_staff:
+        messages.error(request, 'Apenas gerentes podem rejeitar devoluções.')
+        return redirect('pos:return_detail', pk=pk)
+    
+    return_instance = get_object_or_404(Return, pk=pk)
+    rejection_reason = request.POST.get('rejection_reason', '').strip()
+    
+    try:
+        return_services.reject_return(return_instance, request.user, rejection_reason)
+        messages.warning(request, f'Devolução #{return_instance.pk} rejeitada.')
+    except return_services.ReturnValidationError as e:
+        messages.error(request, str(e))
+    
+    return redirect('pos:return_detail', pk=pk)
+
+
+class ReturnReportView(UserPassesTestMixin, ListView):
+    """Relatório de devoluções com filtros e totalizadores."""
+    model = Return
+    template_name = 'pos/return_report.html'
+    context_object_name = 'returns'
+    
+    def test_func(self):
+        """Apenas usuários staff podem acessar."""
+        return self.request.user.is_staff
+    
+    def get_queryset(self):
+        queryset = Return.objects.select_related(
+            'original_sale', 'customer', 'user', 'approved_by'
+        ).prefetch_related('items__product')
+        
+        # Filtros
+        status = self.request.GET.get('status')
+        refund_method = self.request.GET.get('refund_method')
+        date_from = self.request.GET.get('date_from')
+        date_to = self.request.GET.get('date_to')
+        customer_id = self.request.GET.get('customer')
+        
+        if status:
+            queryset = queryset.filter(status=status)
+        
+        if refund_method:
+            queryset = queryset.filter(refund_method=refund_method)
+        
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+        
+        if customer_id:
+            queryset = queryset.filter(customer_id=customer_id)
+        
+        return queryset.order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        queryset = self.get_queryset()
+        
+        # Totalizadores
+        from django.db import models as db_models
+        totals = queryset.aggregate(
+            total_amount=Sum('total_amount'),
+            total_count=db_models.Count('id'),
+        )
+        
+        # Totais por status
+        by_status = {}
+        for status_code, status_label in Return.Status.choices:
+            stats = queryset.filter(status=status_code).aggregate(
+                total=Sum('total_amount'),
+                count=db_models.Count('id')
+            )
+            by_status[status_label] = stats
+        
+        # Totais por método de reembolso
+        by_method = {}
+        for method_code, method_label in Return.RefundMethod.choices:
+            stats = queryset.filter(refund_method=method_code).aggregate(
+                total=Sum('total_amount'),
+                count=db_models.Count('id')
+            )
+            by_method[method_label] = stats
+        
+        context['totals'] = totals
+        context['by_status'] = by_status
+        context['by_method'] = by_method
+        context['status_choices'] = Return.Status.choices
+        context['refund_method_choices'] = Return.RefundMethod.choices
+        context['customers'] = Customer.objects.filter(is_active=True).order_by('full_name')
+        
+        return context

@@ -68,6 +68,8 @@ class Sale(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Rascunho'
         FINALIZED = 'finalized', 'Finalizada'
+        PARTIALLY_RETURNED = 'partially_returned', 'Parcialmente Devolvida'
+        FULLY_RETURNED = 'fully_returned', 'Totalmente Devolvida'
         CANCELLED = 'cancelled', 'Cancelada'
     
     customer = models.ForeignKey(
@@ -379,3 +381,171 @@ class LedgerEntry(models.Model):
     
     def __str__(self) -> str:
         return f'{self.get_type_display()} - {self.customer.full_name} - R$ {self.amount}'
+
+
+class Return(models.Model):
+    """Devolução de produtos de uma venda."""
+    
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'Pendente'
+        APPROVED = 'approved', 'Aprovada'
+        REJECTED = 'rejected', 'Rejeitada'
+        COMPLETED = 'completed', 'Concluída'
+    
+    class RefundMethod(models.TextChoices):
+        CREDIT = 'credit', 'Crédito em conta'
+        CASH = 'cash', 'Dinheiro'
+        CARD = 'card', 'Cartão'
+        PIX = 'pix', 'PIX'
+    
+    original_sale = models.ForeignKey(
+        Sale,
+        on_delete=models.PROTECT,
+        related_name='returns',
+        verbose_name='Venda original'
+    )
+    customer = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        related_name='returns',
+        verbose_name='Cliente'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        related_name='returns_processed',
+        verbose_name='Processado por',
+        help_text='Usuário que processou a devolução'
+    )
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='returns_approved',
+        verbose_name='Aprovado por',
+        help_text='Gerente/admin que aprovou'
+    )
+    
+    status = models.CharField(
+        'Status',
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    reason = models.TextField(
+        'Motivo da devolução',
+        help_text='Descrição do motivo da devolução'
+    )
+    refund_method = models.CharField(
+        'Método de reembolso',
+        max_length=20,
+        choices=RefundMethod.choices,
+        default=RefundMethod.CREDIT,
+        help_text='Como o valor será devolvido ao cliente'
+    )
+    
+    # Valores calculados
+    total_amount = models.DecimalField(
+        'Valor total devolvido',
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text='Valor base dos produtos devolvidos (sem taxas)'
+    )
+    
+    # Metadados
+    notes = models.TextField('Observações', blank=True)
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    approved_at = models.DateTimeField('Aprovado em', null=True, blank=True)
+    completed_at = models.DateTimeField('Concluído em', null=True, blank=True)
+    
+    # Referência ao lançamento de crédito gerado
+    ledger_entry = models.OneToOneField(
+        LedgerEntry,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='return_source',
+        verbose_name='Lançamento de crédito'
+    )
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Devolução'
+        verbose_name_plural = 'Devoluções'
+        indexes = [
+            models.Index(fields=['original_sale', 'status']),
+            models.Index(fields=['customer', 'status']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+    
+    def __str__(self) -> str:
+        return f'Devolução #{self.pk} - Venda #{self.original_sale.pk} - {self.get_status_display()}'
+    
+    @property
+    def items_count(self) -> int:
+        """Retorna a quantidade total de itens devolvidos."""
+        return self.items.aggregate(total=models.Sum('quantity'))['total'] or 0
+
+
+class ReturnItem(models.Model):
+    """Item devolvido em uma devolução."""
+    
+    return_instance = models.ForeignKey(
+        Return,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='Devolução'
+    )
+    sale_item = models.ForeignKey(
+        SaleItem,
+        on_delete=models.PROTECT,
+        related_name='return_items',
+        verbose_name='Item da venda original'
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name='return_items',
+        verbose_name='Produto'
+    )
+    quantity = models.PositiveIntegerField(
+        'Quantidade devolvida',
+        validators=[MinValueValidator(1)]
+    )
+    unit_price = models.DecimalField(
+        'Preço unitário',
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        help_text='Preço pelo qual foi vendido'
+    )
+    line_total = models.DecimalField(
+        'Total do item',
+        max_digits=12,
+        decimal_places=2,
+        default=Decimal('0'),
+        validators=[MinValueValidator(Decimal('0'))]
+    )
+    
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        ordering = ['id']
+        verbose_name = 'Item devolvido'
+        verbose_name_plural = 'Itens devolvidos'
+    
+    def __str__(self) -> str:
+        return f'{self.product.title} x{self.quantity}'
+    
+    def save(self, *args, **kwargs):
+        """Calcula o total da linha antes de salvar."""
+        self.line_total = (Decimal(str(self.quantity)) * self.unit_price).quantize(
+            TWO_PLACES, rounding=ROUND_HALF_UP
+        )
+        super().save(*args, **kwargs)
+

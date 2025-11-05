@@ -1,0 +1,370 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Devolução #{{ return_obj.id }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <a
+        href="{% url 'pos:return_list' %}"
+        class="text-muted-foreground hover:text-primary transition-colors"
+      >
+        <i data-lucide="arrow-left" class="h-5 w-5"></i>
+      </a>
+      <div>
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
+          Devolução #{{ return_obj.id }}
+        </h1>
+        <p class="text-muted-foreground mt-2">
+          {{ return_obj.created_at|date:"d/m/Y H:i" }} - Venda #{{ return_obj.original_sale.id }}
+        </p>
+      </div>
+    </div>
+    
+    <!-- Ações baseadas no status -->
+    <div class="flex space-x-2">
+      {% if return_obj.status == 'pending' and user.is_staff %}
+        <form method="post" action="{% url 'pos:return_approve' return_obj.id %}" class="inline">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="inline-flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            onclick="return confirm('Confirma a aprovação desta devolução?')"
+          >
+            <i data-lucide="check-circle" class="h-4 w-4"></i>
+            <span>Aprovar</span>
+          </button>
+        </form>
+        
+        <button
+          onclick="showRejectModal()"
+          class="inline-flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          <i data-lucide="x-circle" class="h-4 w-4"></i>
+          <span>Rejeitar</span>
+        </button>
+      {% endif %}
+      
+      {% if return_obj.status == 'approved' and user.is_staff %}
+        <form method="post" action="{% url 'pos:return_complete' return_obj.id %}" class="inline">
+          {% csrf_token %}
+          <button
+            type="submit"
+            class="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            onclick="return confirm('Confirma a conclusão desta devolução? O estoque será atualizado e o crédito será gerado.')"
+          >
+            <i data-lucide="package-check" class="h-4 w-4"></i>
+            <span>Concluir Devolução</span>
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <!-- Coluna Esquerda: Detalhes -->
+  <div class="lg:col-span-2 space-y-6">
+    
+    <!-- Status e Informações -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p class="text-sm text-muted-foreground">Status</p>
+          {% if return_obj.status == 'pending' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-500/20 text-orange-600">
+              {{ return_obj.get_status_display }}
+            </span>
+          {% elif return_obj.status == 'approved' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/20 text-blue-600">
+              {{ return_obj.get_status_display }}
+            </span>
+          {% elif return_obj.status == 'completed' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-600">
+              {{ return_obj.get_status_display }}
+            </span>
+          {% elif return_obj.status == 'rejected' %}
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-500/20 text-red-600">
+              {{ return_obj.get_status_display }}
+            </span>
+          {% endif %}
+        </div>
+        <div>
+          <p class="text-sm text-muted-foreground">Processado por</p>
+          <p class="font-semibold">{{ return_obj.user.username }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-muted-foreground">Método de Reembolso</p>
+          <p class="font-semibold">{{ return_obj.get_refund_method_display }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-muted-foreground">Total</p>
+          <p class="font-semibold text-orange-600 text-lg">R$ {{ return_obj.total_amount|floatformat:2 }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Cliente -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-primary/20 text-primary rounded flex items-center justify-center">
+          <i data-lucide="user" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Cliente</h3>
+      </div>
+      
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Nome:</span>
+          <span class="font-medium">{{ return_obj.customer.full_name }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Telefone:</span>
+          <span class="font-medium">{{ return_obj.customer.phone }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Itens Devolvidos -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-orange-500/20 text-orange-500 rounded flex items-center justify-center">
+          <i data-lucide="package" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Itens Devolvidos</h3>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-border">
+              <th class="text-left py-3 text-sm font-medium text-muted-foreground">Produto</th>
+              <th class="text-center py-3 text-sm font-medium text-muted-foreground">Qtd.</th>
+              <th class="text-right py-3 text-sm font-medium text-muted-foreground">Preço Un.</th>
+              <th class="text-right py-3 text-sm font-medium text-muted-foreground">Total</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            {% for item in return_obj.items.all %}
+            <tr>
+              <td class="py-3">
+                <p class="font-medium">{{ item.product.title }}</p>
+                <p class="text-sm text-muted-foreground">SKU: {{ item.product.sku }}</p>
+              </td>
+              <td class="text-center py-3 font-medium">{{ item.quantity }}</td>
+              <td class="text-right py-3">R$ {{ item.unit_price|floatformat:2 }}</td>
+              <td class="text-right py-3 font-semibold">R$ {{ item.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="border-t-2 border-border">
+              <td colspan="3" class="py-3 text-right font-semibold">Total Devolvido:</td>
+              <td class="text-right py-3 font-bold text-orange-600 text-lg">R$ {{ return_obj.total_amount|floatformat:2 }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Motivo e Observações -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-blue-500/20 text-blue-500 rounded flex items-center justify-center">
+          <i data-lucide="message-square" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Motivo da Devolução</h3>
+      </div>
+      
+      <p class="text-muted-foreground whitespace-pre-wrap">{{ return_obj.reason }}</p>
+      
+      {% if return_obj.notes %}
+      <div class="mt-4 pt-4 border-t border-border">
+        <h4 class="font-semibold mb-2">Observações:</h4>
+        <p class="text-muted-foreground whitespace-pre-wrap">{{ return_obj.notes }}</p>
+      </div>
+      {% endif %}
+    </div>
+    
+  </div>
+  
+  <!-- Coluna Direita: Resumo -->
+  <div class="space-y-6">
+    
+    <!-- Venda Original -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-green-500/20 text-green-500 rounded flex items-center justify-center">
+          <i data-lucide="shopping-cart" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Venda Original</h3>
+      </div>
+      
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Número:</span>
+          <a href="{% url 'pos:sale_detail' return_obj.original_sale.id %}" class="font-medium text-primary hover:underline">
+            #{{ return_obj.original_sale.id }}
+          </a>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Data:</span>
+          <span class="font-medium">{{ return_obj.original_sale.finalized_at|date:"d/m/Y" }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Total:</span>
+          <span class="font-medium">R$ {{ return_obj.original_sale.total|floatformat:2 }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Status:</span>
+          <span class="font-medium">{{ return_obj.original_sale.get_status_display }}</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Aprovação -->
+    {% if return_obj.approved_by %}
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-purple-500/20 text-purple-500 rounded flex items-center justify-center">
+          <i data-lucide="user-check" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Aprovação</h3>
+      </div>
+      
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Aprovado por:</span>
+          <span class="font-medium">{{ return_obj.approved_by.username }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Data:</span>
+          <span class="font-medium">{{ return_obj.approved_at|date:"d/m/Y H:i" }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Lançamento de Crédito -->
+    {% if return_obj.ledger_entry %}
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-green-500/20 text-green-500 rounded flex items-center justify-center">
+          <i data-lucide="wallet" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Crédito Gerado</h3>
+      </div>
+      
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Valor:</span>
+          <span class="font-semibold text-green-600">R$ {{ return_obj.ledger_entry.amount|floatformat:2 }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Status:</span>
+          <span class="font-medium">{{ return_obj.ledger_entry.get_status_display }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Data:</span>
+          <span class="font-medium">{{ return_obj.ledger_entry.created_at|date:"d/m/Y H:i" }}</span>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Datas -->
+    <div class="rounded-lg border border-border bg-card p-6">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="h-8 w-8 bg-gray-500/20 text-gray-500 rounded flex items-center justify-center">
+          <i data-lucide="calendar" class="h-4 w-4"></i>
+        </div>
+        <h3 class="text-lg font-semibold">Datas</h3>
+      </div>
+      
+      <div class="space-y-2">
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Criada em:</span>
+          <span class="font-medium">{{ return_obj.created_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% if return_obj.approved_at %}
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Aprovada em:</span>
+          <span class="font-medium">{{ return_obj.approved_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if return_obj.completed_at %}
+        <div class="flex justify-between">
+          <span class="text-muted-foreground">Concluída em:</span>
+          <span class="font-medium">{{ return_obj.completed_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<!-- Modal de Rejeição -->
+<div id="rejectModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-card text-foreground rounded-lg p-6 max-w-md w-full mx-4 border border-border">
+    <h3 class="text-lg font-semibold mb-4">Rejeitar Devolução</h3>
+    
+    <form method="post" action="{% url 'pos:return_reject' return_obj.id %}">
+      {% csrf_token %}
+      
+      <div class="mb-4">
+        <label for="rejection_reason" class="block text-sm font-medium mb-2">
+          Motivo da Rejeição (opcional)
+        </label>
+        <textarea
+          name="rejection_reason"
+          id="rejection_reason"
+          rows="4"
+          class="w-full px-4 py-3 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+          placeholder="Descreva o motivo da rejeição..."
+        ></textarea>
+      </div>
+      
+      <div class="flex justify-end space-x-3">
+        <button
+          type="button"
+          onclick="hideRejectModal()"
+          class="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+        >
+          Confirmar Rejeição
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function showRejectModal() {
+    document.getElementById('rejectModal').classList.remove('hidden');
+  }
+  
+  function hideRejectModal() {
+    document.getElementById('rejectModal').classList.add('hidden');
+  }
+  
+  // Fechar modal ao clicar fora
+  document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+      hideRejectModal();
+    }
+  });
+  
+  // Inicializar Lucide icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Processar Devolução - Venda #{{ sale.id }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="flex items-center space-x-3">
+    <a
+      href="{% url 'pos:sale_detail' sale.id %}"
+      class="text-muted-foreground hover:text-primary transition-colors"
+    >
+      <i data-lucide="arrow-left" class="h-5 w-5"></i>
+    </a>
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
+        Processar Devolução
+      </h1>
+      <p class="text-muted-foreground mt-2">
+        Venda #{{ sale.id }} - {{ sale.customer.full_name }}
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Informações da Venda -->
+<div class="mb-6 rounded-lg border border-border bg-card p-6">
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <p class="text-sm text-muted-foreground">Data da Venda</p>
+      <p class="font-semibold">{{ sale.finalized_at|date:"d/m/Y H:i" }}</p>
+    </div>
+    <div>
+      <p class="text-sm text-muted-foreground">Vendedor</p>
+      <p class="font-semibold">{{ sale.user.username }}</p>
+    </div>
+    <div>
+      <p class="text-sm text-muted-foreground">Total da Venda</p>
+      <p class="font-semibold text-green-600">R$ {{ sale.total|floatformat:2 }}</p>
+    </div>
+    <div>
+      <p class="text-sm text-muted-foreground">Status</p>
+      <p class="font-semibold">{{ sale.get_status_display }}</p>
+    </div>
+  </div>
+</div>
+
+<form method="post" class="space-y-6">
+  {% csrf_token %}
+  
+  <!-- Seleção de Itens -->
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3 mb-4">
+      <div class="h-8 w-8 bg-orange-500/20 text-orange-500 rounded flex items-center justify-center">
+        <i data-lucide="package" class="h-4 w-4"></i>
+      </div>
+      <h3 class="text-lg font-semibold">Selecione os itens a devolver</h3>
+    </div>
+    
+    <div class="space-y-3">
+      {% for item_data in items_data %}
+      <div class="border border-border rounded-lg p-4 hover:bg-muted/50 transition-colors">
+        <div class="flex items-center justify-between">
+          <div class="flex-1">
+            <p class="font-semibold">{{ item_data.item.product.title }}</p>
+            <div class="flex items-center space-x-4 mt-1 text-sm text-muted-foreground">
+              <span>Vendido: {{ item_data.item.quantity }} un.</span>
+              {% if item_data.already_returned > 0 %}
+              <span class="text-orange-600">Já devolvido: {{ item_data.already_returned }} un.</span>
+              {% endif %}
+              <span class="text-green-600 font-semibold">Disponível: {{ item_data.available }} un.</span>
+            </div>
+            <p class="text-sm text-muted-foreground mt-1">
+              Preço unitário: R$ {{ item_data.item.unit_price|floatformat:2 }}
+            </p>
+          </div>
+          
+          <div class="flex items-center space-x-4">
+            <div>
+              <label for="item_{{ item_data.item.id }}" class="block text-sm font-medium mb-1">
+                Qtd. a devolver
+              </label>
+              <input
+                type="number"
+                id="item_{{ item_data.item.id }}"
+                name="item_{{ item_data.item.id }}"
+                min="0"
+                max="{{ item_data.available }}"
+                value="0"
+                class="w-24 px-3 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+            </div>
+            <div class="text-right">
+              <p class="text-sm text-muted-foreground">Subtotal</p>
+              <p class="font-semibold text-lg" id="subtotal_{{ item_data.item.id }}">R$ 0,00</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    
+    <div class="mt-6 pt-6 border-t border-border">
+      <div class="flex justify-between items-center">
+        <p class="text-lg font-semibold">Total da Devolução:</p>
+        <p class="text-2xl font-bold text-orange-600" id="total_return">R$ 0,00</p>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Motivo da Devolução -->
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3 mb-4">
+      <div class="h-8 w-8 bg-blue-500/20 text-blue-500 rounded flex items-center justify-center">
+        <i data-lucide="message-square" class="h-4 w-4"></i>
+      </div>
+      <h3 class="text-lg font-semibold">Motivo da Devolução <span class="text-red-500">*</span></h3>
+    </div>
+    
+    <textarea
+      name="reason"
+      id="reason"
+      rows="4"
+      required
+      class="w-full px-4 py-3 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+      placeholder="Descreva o motivo da devolução..."
+    ></textarea>
+  </div>
+  
+  <!-- Método de Reembolso -->
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3 mb-4">
+      <div class="h-8 w-8 bg-green-500/20 text-green-500 rounded flex items-center justify-center">
+        <i data-lucide="credit-card" class="h-4 w-4"></i>
+      </div>
+      <h3 class="text-lg font-semibold">Método de Reembolso</h3>
+    </div>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {% for value, label in refund_method_choices %}
+      <label class="relative flex items-center space-x-3 border border-border rounded-lg p-4 cursor-pointer hover:bg-muted/50 transition-colors">
+        <input
+          type="radio"
+          name="refund_method"
+          value="{{ value }}"
+          {% if value == 'credit' %}checked{% endif %}
+          class="text-primary focus:ring-primary"
+        >
+        <span class="font-medium">{{ label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+    
+    <p class="mt-3 text-sm text-muted-foreground">
+      <i data-lucide="info" class="h-4 w-4 inline"></i>
+      Se escolher "Crédito em conta", o valor ficará disponível para uso em vendas futuras.
+    </p>
+  </div>
+  
+  <!-- Observações -->
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center space-x-3 mb-4">
+      <div class="h-8 w-8 bg-gray-500/20 text-gray-500 rounded flex items-center justify-center">
+        <i data-lucide="file-text" class="h-4 w-4"></i>
+      </div>
+      <h3 class="text-lg font-semibold">Observações (opcional)</h3>
+    </div>
+    
+    <textarea
+      name="notes"
+      id="notes"
+      rows="3"
+      class="w-full px-4 py-3 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+      placeholder="Informações adicionais sobre a devolução..."
+    ></textarea>
+  </div>
+  
+  <!-- Botões de Ação -->
+  <div class="flex justify-end space-x-3">
+    <a
+      href="{% url 'pos:sale_detail' sale.id %}"
+      class="px-6 py-3 border border-border rounded-lg hover:bg-muted transition-colors"
+    >
+      Cancelar
+    </a>
+    <button
+      type="submit"
+      id="submit_btn"
+      disabled
+      class="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <i data-lucide="check" class="h-4 w-4 inline mr-2"></i>
+      Processar Devolução
+    </button>
+  </div>
+</form>
+
+<script>
+  // @ts-nocheck
+  // eslint-disable
+  // Dados dos itens para cálculo
+  const itemsData = {};
+  {% for item_data in items_data %}
+  itemsData[{{ item_data.item.id }}] = {
+    price: parseFloat('{{ item_data.item.unit_price }}'),
+    max: {{ item_data.available }}
+  };
+  {% endfor %}
+  
+  console.log('Items data loaded:', itemsData);
+  
+  function formatCurrency(value) {
+    return 'R$ ' + value.toFixed(2).replace('.', ',');
+  }
+  
+  function updateTotal() {
+    console.log('updateTotal called');
+    let total = 0;
+    let hasItems = false;
+    
+    for (const [itemId, data] of Object.entries(itemsData)) {
+      const input = document.getElementById('item_' + itemId);
+      if (!input) {
+        console.error('Input not found for item:', itemId);
+        continue;
+      }
+      
+      const quantity = parseInt(input.value) || 0;
+      const subtotal = quantity * data.price;
+      
+      console.log(`Item ${itemId}: qty=${quantity}, price=${data.price}, subtotal=${subtotal}`);
+      
+      // Atualizar subtotal do item
+      const subtotalEl = document.getElementById('subtotal_' + itemId);
+      if (subtotalEl) {
+        subtotalEl.textContent = formatCurrency(subtotal);
+      }
+      
+      total += subtotal;
+      
+      if (quantity > 0) {
+        hasItems = true;
+      }
+    }
+    
+    console.log('Total:', total, 'Has items:', hasItems);
+    
+    // Atualizar total
+    const totalEl = document.getElementById('total_return');
+    if (totalEl) {
+      totalEl.textContent = formatCurrency(total);
+    }
+    
+    // Habilitar/desabilitar botão de envio
+    const submitBtn = document.getElementById('submit_btn');
+    const reasonField = document.getElementById('reason');
+    const hasReason = reasonField && reasonField.value.trim().length > 0;
+    
+    console.log('Has reason:', hasReason, 'Reason text:', reasonField ? reasonField.value : 'N/A');
+    
+    if (submitBtn) {
+      submitBtn.disabled = !(hasItems && hasReason);
+      console.log('Button disabled:', submitBtn.disabled);
+    }
+  }
+  
+  // Inicializar quando o DOM estiver pronto
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM ready, setting up listeners');
+    
+    // Adicionar listeners a todos os inputs de quantidade
+    for (const itemId of Object.keys(itemsData)) {
+      const input = document.getElementById('item_' + itemId);
+      if (input) {
+        input.addEventListener('input', updateTotal);
+        input.addEventListener('change', updateTotal);
+        console.log('Listener added to item', itemId);
+      }
+    }
+    
+    // Listener para o campo de motivo
+    const reasonField = document.getElementById('reason');
+    if (reasonField) {
+      reasonField.addEventListener('input', updateTotal);
+      console.log('Listener added to reason field');
+    }
+    
+    // Inicializar Lucide icons
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+    
+    // Chamar updateTotal uma vez para inicializar
+    updateTotal();
+  });
+</script>
+{% endblock %}

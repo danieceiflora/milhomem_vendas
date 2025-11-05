@@ -37,4 +37,13 @@ urlpatterns = [
     # Lançamentos (ledger)
     path('ledger/', views.LedgerListView.as_view(), name='ledger_list'),
     path('ledger/reassign/', views.reassign_ledger_view, name='reassign_ledger'),
+    
+    # Devoluções (returns)
+    path('returns/', views.ReturnListView.as_view(), name='return_list'),
+    path('returns/<int:pk>/', views.ReturnDetailView.as_view(), name='return_detail'),
+    path('returns/create/<int:sale_pk>/', views.ReturnCreateView.as_view(), name='return_create'),
+    path('returns/<int:pk>/approve/', views.return_approve_view, name='return_approve'),
+    path('returns/<int:pk>/complete/', views.return_complete_view, name='return_complete'),
+    path('returns/<int:pk>/reject/', views.return_reject_view, name='return_reject'),
+    path('returns/report/', views.ReturnReportView.as_view(), name='return_report'),
 ]

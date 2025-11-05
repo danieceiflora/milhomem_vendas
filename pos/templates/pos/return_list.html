@@ -1,0 +1,267 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Devoluções{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-orange-400 via-red-400 to-orange-400 bg-clip-text text-transparent">
+        Devoluções
+      </h1>
+      <p class="text-muted-foreground mt-2">
+        Gerenciar devoluções e trocas de produtos
+      </p>
+    </div>
+    <a
+      href="{% url 'pos:return_report' %}"
+      class="inline-flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+    >
+      <i data-lucide="bar-chart" class="h-4 w-4"></i>
+      <span>Ver Relatório</span>
+    </a>
+  </div>
+</div>
+
+<!-- Estatísticas -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Pendentes</p>
+        <p class="text-2xl font-bold text-orange-600">{{ stats.count_pending|default:0 }}</p>
+      </div>
+      <div class="h-12 w-12 bg-orange-500/20 text-orange-500 rounded-full flex items-center justify-center">
+        <i data-lucide="clock" class="h-6 w-6"></i>
+      </div>
+    </div>
+    <p class="text-sm text-muted-foreground mt-2">
+      R$ {{ stats.total_pending|default:0|floatformat:2 }}
+    </p>
+  </div>
+  
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Concluídas</p>
+        <p class="text-2xl font-bold text-green-600">{{ stats.count_completed|default:0 }}</p>
+      </div>
+      <div class="h-12 w-12 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center">
+        <i data-lucide="check-circle" class="h-6 w-6"></i>
+      </div>
+    </div>
+    <p class="text-sm text-muted-foreground mt-2">
+      R$ {{ stats.total_completed|default:0|floatformat:2 }}
+    </p>
+  </div>
+  
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Total Devoluções</p>
+        <p class="text-2xl font-bold">{{ page_obj.paginator.count }}</p>
+      </div>
+      <div class="h-12 w-12 bg-blue-500/20 text-blue-500 rounded-full flex items-center justify-center">
+        <i data-lucide="package" class="h-6 w-6"></i>
+      </div>
+    </div>
+  </div>
+  
+  <div class="rounded-lg border border-border bg-card p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-muted-foreground">Valor Total</p>
+        <p class="text-2xl font-bold text-orange-600">
+          R$ {{ stats.total_pending|default:0|add:stats.total_completed|default:0|floatformat:2 }}
+        </p>
+      </div>
+      <div class="h-12 w-12 bg-purple-500/20 text-purple-500 rounded-full flex items-center justify-center">
+        <i data-lucide="trending-down" class="h-6 w-6"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="rounded-lg border border-border bg-card p-6 mb-6">
+  <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div>
+      <label class="block text-sm font-medium mb-2">Status</label>
+      <select
+        name="status"
+        class="w-full px-4 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+      >
+        <option value="">Todos</option>
+        {% for value, label in status_choices %}
+        <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>
+          {{ label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium mb-2">Método de Reembolso</label>
+      <select
+        name="refund_method"
+        class="w-full px-4 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+      >
+        <option value="">Todos</option>
+        {% for value, label in refund_method_choices %}
+        <option value="{{ value }}" {% if request.GET.refund_method == value %}selected{% endif %}>
+          {{ label }}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium mb-2">Buscar</label>
+      <input
+        type="text"
+        name="search"
+        value="{{ request.GET.search }}"
+        placeholder="Cliente, venda, motivo..."
+        class="w-full px-4 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+      >
+        class="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+      >
+    </div>
+    
+    <div class="flex items-end">
+      <button
+        type="submit"
+        class="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors"
+      >
+        <i data-lucide="search" class="h-4 w-4 inline mr-2"></i>
+        Filtrar
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Tabela de Devoluções -->
+<div class="rounded-lg border border-border bg-card overflow-hidden">
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-muted/50">
+        <tr>
+          <th class="text-left px-6 py-3 text-sm font-medium text-muted-foreground">#</th>
+          <th class="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Venda</th>
+          <th class="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Cliente</th>
+          <th class="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Status</th>
+          <th class="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Reembolso</th>
+          <th class="text-right px-6 py-3 text-sm font-medium text-muted-foreground">Valor</th>
+          <th class="text-left px-6 py-3 text-sm font-medium text-muted-foreground">Data</th>
+          <th class="text-center px-6 py-3 text-sm font-medium text-muted-foreground">Ações</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border">
+        {% for return_obj in returns %}
+        <tr class="hover:bg-muted/30 transition-colors">
+          <td class="px-6 py-4">
+            <span class="font-mono font-semibold">#{{ return_obj.id }}</span>
+          </td>
+          <td class="px-6 py-4">
+            <a href="{% url 'pos:sale_detail' return_obj.original_sale.id %}" class="text-primary hover:underline">
+              #{{ return_obj.original_sale.id }}
+            </a>
+          </td>
+          <td class="px-6 py-4">
+            <p class="font-medium">{{ return_obj.customer.full_name }}</p>
+            <p class="text-sm text-muted-foreground">{{ return_obj.customer.phone }}</p>
+          </td>
+          <td class="px-6 py-4">
+            {% if return_obj.status == 'pending' %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-500/20 text-orange-600">
+                {{ return_obj.get_status_display }}
+              </span>
+            {% elif return_obj.status == 'approved' %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600">
+                {{ return_obj.get_status_display }}
+              </span>
+            {% elif return_obj.status == 'completed' %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-600">
+                {{ return_obj.get_status_display }}
+              </span>
+            {% elif return_obj.status == 'rejected' %}
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-600">
+                {{ return_obj.get_status_display }}
+              </span>
+            {% endif %}
+          </td>
+          <td class="px-6 py-4 text-sm">
+            {{ return_obj.get_refund_method_display }}
+          </td>
+          <td class="px-6 py-4 text-right font-semibold text-orange-600">
+            R$ {{ return_obj.total_amount|floatformat:2 }}
+          </td>
+          <td class="px-6 py-4 text-sm text-muted-foreground">
+            {{ return_obj.created_at|date:"d/m/Y H:i" }}
+          </td>
+          <td class="px-6 py-4 text-center">
+            <a
+              href="{% url 'pos:return_detail' return_obj.id %}"
+              class="text-primary hover:text-primary/80"
+              title="Ver detalhes"
+            >
+              <i data-lucide="eye" class="h-4 w-4 inline"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="px-6 py-12 text-center">
+            <div class="flex flex-col items-center justify-center text-muted-foreground">
+              <i data-lucide="inbox" class="h-12 w-12 mb-3"></i>
+              <p>Nenhuma devolução encontrada</p>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Paginação -->
+{% if is_paginated %}
+<div class="mt-6 flex items-center justify-between">
+  <div class="text-sm text-muted-foreground">
+    Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ page_obj.paginator.count }} devoluções
+  </div>
+  
+  <div class="flex space-x-2">
+    {% if page_obj.has_previous %}
+    <a
+      href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+      class="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
+    >
+      Anterior
+    </a>
+    {% endif %}
+    
+    <span class="px-4 py-2 border border-border rounded-lg bg-muted">
+      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+    <a
+      href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}"
+      class="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors"
+    >
+      Próxima
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+  // Inicializar Lucide icons
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+</script>
+{% endblock %}

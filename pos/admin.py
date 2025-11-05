@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
+from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod, Return, ReturnItem
 
 
 class SaleItemInline(admin.TabularInline):
@@ -158,3 +158,61 @@ class PaymentMethodAdmin(admin.ModelAdmin):
             '<span style="background-color: gray; color: white; padding: 3px 8px; border-radius: 3px;">✗ Inativo</span>'
         )
     is_active_badge.short_description = 'Status'
+
+
+class ReturnItemInline(admin.TabularInline):
+    model = ReturnItem
+    extra = 0
+    readonly_fields = ['line_total', 'created_at']
+    fields = ['sale_item', 'product', 'quantity', 'unit_price', 'line_total']
+
+
+@admin.register(Return)
+class ReturnAdmin(admin.ModelAdmin):
+    list_display = [
+        'id', 'original_sale', 'customer', 'status_badge', 'total_amount',
+        'refund_method', 'user', 'created_at'
+    ]
+    list_filter = ['status', 'refund_method', 'created_at']
+    search_fields = ['customer__full_name', 'reason', 'notes']
+    readonly_fields = [
+        'total_amount', 'items_count', 'ledger_entry',
+        'created_at', 'updated_at', 'approved_at', 'completed_at'
+    ]
+    inlines = [ReturnItemInline]
+    
+    fieldsets = (
+        ('Informações Principais', {
+            'fields': ('original_sale', 'customer', 'user', 'approved_by', 'status')
+        }),
+        ('Detalhes da Devolução', {
+            'fields': ('reason', 'refund_method', 'total_amount', 'items_count')
+        }),
+        ('Lançamento', {
+            'fields': ('ledger_entry',)
+        }),
+        ('Observações', {
+            'fields': ('notes',),
+            'classes': ('collapse',)
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'updated_at', 'approved_at', 'completed_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def status_badge(self, obj):
+        colors = {
+            'pending': 'orange',
+            'approved': 'blue',
+            'rejected': 'red',
+            'completed': 'green'
+        }
+        color = colors.get(obj.status, 'gray')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+
