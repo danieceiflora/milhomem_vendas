@@ -156,13 +156,23 @@
             <span class="text-xs text-muted-foreground">{{ sale.user.username }}</span>
           </td>
           <td class="px-4 py-3 text-center">
-            <a
-              href="{% url 'pos:sale_detail' sale.id %}"
-              class="inline-flex items-center space-x-1 text-primary hover:text-primary/80 transition-colors"
-            >
-              <i data-lucide="eye" class="h-4 w-4"></i>
-              <span class="text-sm">Ver</span>
-            </a>
+            <div class="flex items-center justify-center space-x-2">
+              <a
+                href="{% url 'pos:sale_detail' sale.id %}"
+                class="inline-flex items-center space-x-1 text-primary hover:text-primary/80 transition-colors"
+                title="Ver detalhes"
+              >
+                <i data-lucide="eye" class="h-4 w-4"></i>
+              </a>
+              <a
+                href="{% url 'pos:sale_receipt' sale.id %}"
+                target="_blank"
+                class="inline-flex items-center space-x-1 text-blue-500 hover:text-blue-400 transition-colors"
+                title="Imprimir recibo"
+              >
+                <i data-lucide="printer" class="h-4 w-4"></i>
+              </a>
+            </div>
           </td>
         </tr>
         {% empty %}
