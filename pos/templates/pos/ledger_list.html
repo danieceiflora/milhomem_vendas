@@ -15,13 +15,13 @@
 </div>
 
 <div class="rounded-lg border border-border bg-card p-6 mb-6">
-  <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+  <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
     <div>
       <label class="text-sm font-medium mb-2 block">Tipo</label>
       <select name="type" class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
         <option value="">Todos</option>
-        <option value="credit" {% if request.GET.type == 'credit' %}selected{% endif %}>Crédito</option>
-        <option value="debit" {% if request.GET.type == 'debit' %}selected{% endif %}>Débito</option>
+        <option value="credit" {% if type_filter == 'credit' %}selected{% endif %}>Crédito</option>
+        <option value="debit" {% if type_filter == 'debit' %}selected{% endif %}>Débito</option>
       </select>
     </div>
     
@@ -29,9 +29,19 @@
       <label class="text-sm font-medium mb-2 block">Status</label>
       <select name="status" class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
         <option value="">Todos</option>
-        <option value="open" {% if request.GET.status == 'open' %}selected{% endif %}>Em aberto</option>
-        <option value="settled" {% if request.GET.status == 'settled' %}selected{% endif %}>Liquidado</option>
-        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Cancelado</option>
+        <option value="open" {% if status_filter == 'open' %}selected{% endif %}>Em aberto</option>
+        <option value="settled" {% if status_filter == 'settled' %}selected{% endif %}>Liquidado</option>
+        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelado</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm font-medium mb-2 block">Cliente</label>
+      <select name="customer" class="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+        <option value="">Todos</option>
+        {% for customer in customers %}
+        <option value="{{ customer.id }}" {% if customer_filter == customer.id|stringformat:"s" %}selected{% endif %}>{{ customer.full_name }}</option>
+        {% endfor %}
       </select>
     </div>
     
@@ -55,6 +65,7 @@
           <th class="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
           <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Descrição</th>
           <th class="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
+          <th class="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -92,13 +103,28 @@
             </span>
             {% endif %}
           </td>
-          <td class="py-3 px-4 text-right font-medium">R$ {{ entry.amount }}</td>
+          <td class="py-3 px-4 text-right font-medium">R$ {{ entry.amount|floatformat:2 }}</td>
           <td class="py-3 px-4 text-sm text-muted-foreground">{{ entry.description|default:"—" }}</td>
           <td class="py-3 px-4 text-sm text-muted-foreground">{{ entry.created_at|date:"d/m/Y H:i" }}</td>
+          <td class="py-3 px-4 text-center">
+            {% if entry.type == 'credit' and user.is_staff %}
+            <button
+              type="button"
+              class="inline-flex items-center space-x-2 px-3 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm transfer-credit-btn"
+              data-transfer-entry="{{ entry.id }}"
+              data-transfer-customer="{{ entry.customer.full_name }}"
+            >
+              <i data-lucide="arrow-right-left" class="h-4 w-4"></i>
+              <span>Transferir</span>
+            </button>
+            {% else %}
+            <span class="text-muted-foreground text-sm">—</span>
+            {% endif %}
+          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" class="py-12 text-center text-muted-foreground">
+          <td colspan="7" class="py-12 text-center text-muted-foreground">
             <i data-lucide="inbox" class="h-12 w-12 mx-auto mb-2 opacity-50"></i>
             <p>Nenhum lançamento encontrado</p>
           </td>
@@ -130,8 +156,129 @@
 {% endif %}
 
 <script>
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) {
+      window.lucide.createIcons();
+    }
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+      }
+      return null;
+    }
+
+    const transferModal = document.getElementById('transferModal');
+    if (transferModal) {
+      const transferOverlay = document.getElementById('transferOverlay');
+      const transferForm = document.getElementById('transferForm');
+      const transferEntryInput = document.getElementById('transferEntryId');
+      const transferCustomerSelect = document.getElementById('transferCustomerSelect');
+      const transferCurrentCustomer = document.getElementById('transferCurrentCustomer');
+      const transferError = document.getElementById('transferError');
+
+      function closeTransferModal() {
+        transferModal.classList.add('hidden');
+        transferOverlay.classList.add('hidden');
+        transferForm.reset();
+        transferError.classList.add('hidden');
+        transferError.textContent = '';
+      }
+
+      document.querySelectorAll('.transfer-credit-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          transferEntryInput.value = btn.dataset.transferEntry;
+          transferCurrentCustomer.textContent = btn.dataset.transferCustomer;
+          transferCustomerSelect.value = '';
+          transferModal.classList.remove('hidden');
+          transferOverlay.classList.remove('hidden');
+        });
+      });
+
+      document.getElementById('closeTransferModal').addEventListener('click', closeTransferModal);
+      transferOverlay.addEventListener('click', closeTransferModal);
+
+      transferForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        transferError.classList.add('hidden');
+        transferError.textContent = '';
+
+        const payload = {
+          entry_id: transferEntryInput.value,
+          customer_id: transferCustomerSelect.value,
+        };
+
+        if (!payload.customer_id) {
+          transferError.textContent = 'Selecione o cliente que receberá o crédito.';
+          transferError.classList.remove('hidden');
+          return;
+        }
+
+        try {
+          const response = await fetch(transferForm.dataset.url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken') || '',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await response.json();
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Não foi possível transferir o crédito.');
+          }
+
+          window.location.reload();
+        } catch (error) {
+          transferError.textContent = error.message;
+          transferError.classList.remove('hidden');
+        }
+      });
+    }
+  });
 </script>
+
+{% if user.is_staff %}
+<!-- Modal de Transferência de Crédito -->
+<div id="transferOverlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-40"></div>
+<div id="transferModal" class="hidden fixed inset-0 z-50 flex items-center justify-center px-4">
+  <div class="bg-card border border-border rounded-lg shadow-xl max-w-lg w-full p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold">Transferir Crédito</h3>
+      <button id="closeTransferModal" class="text-muted-foreground hover:text-primary">
+        <i data-lucide="x" class="h-5 w-5"></i>
+      </button>
+    </div>
+
+    <p class="text-sm text-muted-foreground mb-4">
+      Transferir crédito atualmente vinculado a <span class="font-semibold" id="transferCurrentCustomer"></span>.
+    </p>
+
+    <form id="transferForm" data-url="{% url 'pos:reassign_ledger' %}">
+      <input type="hidden" id="transferEntryId">
+      <div class="space-y-2">
+        <label for="transferCustomerSelect" class="text-sm font-medium">Cliente destino</label>
+        <select id="transferCustomerSelect" class="w-full px-4 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+          <option value="">Selecione um cliente</option>
+          {% for customer in customers %}
+          <option value="{{ customer.id }}">{{ customer.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div id="transferError" class="hidden mt-3 text-sm text-red-500"></div>
+      <div class="mt-6 flex justify-end space-x-3">
+        <button type="button" class="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors" onclick="document.getElementById('closeTransferModal').click()">
+          Cancelar
+        </button>
+        <button type="submit" class="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg transition-colors">
+          Transferir Crédito
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

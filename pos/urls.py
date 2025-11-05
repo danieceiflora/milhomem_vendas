@@ -29,6 +29,7 @@ urlpatterns = [
     # Operações de pagamento (JSON API)
     path('add-payment/', views.add_payment_view, name='add_payment'),
     path('remove-payment/', views.remove_payment_view, name='remove_payment'),
+    path('apply-credit/', views.apply_credit_view, name='apply_credit'),
     
     # Cliente e finalização
     path('set-customer/', views.set_customer_view, name='set_customer'),

@@ -42,6 +42,9 @@ class POSNewView(LoginRequiredMixin, View):
         # Serializa dados para o template
         serializer = SaleSerializer(sale)
         
+        # Busca crédito disponível do cliente
+        available_credit = services.get_customer_available_credit(sale.customer)
+        
         # Busca métodos de pagamento ativos
         payment_methods = PaymentMethod.objects.filter(is_active=True)
         payment_methods_data = [
@@ -61,6 +64,7 @@ class POSNewView(LoginRequiredMixin, View):
             'sale_data': serializer.data,
             'payment_methods': payment_methods,
             'payment_methods_data': payment_methods_data,
+            'available_credit': available_credit,
         }
         
         return render(request, self.template_name, context)
@@ -221,15 +225,58 @@ def set_customer_view(request):
         
         sale = services.set_customer(sale, customer_id)
         
+        # Busca crédito disponível do novo cliente
+        available_credit = services.get_customer_available_credit(sale.customer)
+        
         return JsonResponse({
             'success': True,
-            'sale': SaleSerializer(sale).data
+            'sale': SaleSerializer(sale).data,
+            'available_credit': str(available_credit)
         })
     
     except ValueError as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': 'Erro ao definir cliente'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def apply_credit_view(request):
+    """Aplica crédito disponível do cliente como pagamento."""
+    try:
+        data = json.loads(request.body)
+        amount = data.get('amount')
+        
+        # Valida se amount foi fornecido
+        if amount is None or amount == '':
+            return JsonResponse({'success': False, 'error': 'Valor do crédito é obrigatório'}, status=400)
+        
+        credit_amount = Decimal(str(amount))
+        
+        session_key = request.session.session_key
+        sale = services.get_or_create_draft_sale(request.user, session_key)
+        
+        payment = services.apply_credit_to_sale(sale, credit_amount)
+        
+        sale.refresh_from_db()
+        
+        # Atualiza crédito disponível
+        available_credit = services.get_customer_available_credit(sale.customer)
+        
+        return JsonResponse({
+            'success': True,
+            'payment': SalePaymentSerializer(payment).data,
+            'sale': SaleSerializer(sale).data,
+            'available_credit': str(available_credit)
+        })
+    
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': f'Erro ao aplicar crédito: {str(e)}'}, status=500)
 
 
 @login_required
@@ -291,11 +338,22 @@ class LedgerListView(LoginRequiredMixin, ListView):
         
         return queryset
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['type_filter'] = self.request.GET.get('type', '')
+        context['status_filter'] = self.request.GET.get('status', '')
+        context['customer_filter'] = self.request.GET.get('customer', '')
+        context['customers'] = Customer.objects.order_by('full_name')
+        return context
+
 
 @login_required
 @require_http_methods(["POST"])
 def reassign_ledger_view(request):
     """Reatribui um lançamento para outro cliente."""
+    if not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Apenas usuários staff podem transferir créditos.'}, status=403)
+
     try:
         data = json.loads(request.body)
         entry_id = data.get('entry_id')

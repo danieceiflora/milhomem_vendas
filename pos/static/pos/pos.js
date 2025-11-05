@@ -428,6 +428,14 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
               const result = await apiCall('/pos/set-customer/', { customer_id: customerId });
               
+              // Atualiza estado da venda
+              saleData = result.sale;
+              
+              // Atualiza crédito disponível
+              if (result.available_credit !== undefined) {
+                updateCreditUI(parseFloat(result.available_credit) || 0);
+              }
+              
               // Busca os dados do cliente selecionado
               const customer = customers.find(c => c.id == customerId);
               
@@ -825,6 +833,175 @@ document.addEventListener('DOMContentLoaded', function() {
   diffCancel?.addEventListener('click', () => {
     diffModal.classList.add('hidden');
     diffModal.classList.remove('flex');
+  });
+  
+  // ============================================================================
+  // GERENCIAMENTO DE CRÉDITO
+  // ============================================================================
+  
+  let availableCredit = 0;
+  
+  // Elementos do crédito
+  const creditAvailableContainer = document.querySelector('[data-credit-available-container]');
+  const creditAvailableDisplay = document.querySelector('[data-credit-available]');
+  const useCreditBtn = document.querySelector('[data-use-credit-btn]');
+  
+  // Modal de crédito
+  const creditModal = document.getElementById('credit-modal');
+  const creditModalOverlay = document.getElementById('credit-modal-overlay');
+  const closeCreditModal = document.getElementById('close-credit-modal');
+  const modalCreditAvailable = document.querySelector('[data-modal-credit-available]');
+  const modalRemaining = document.querySelector('[data-modal-remaining]');
+  const creditAmountInput = document.querySelector('[data-credit-amount-input]');
+  const creditError = document.querySelector('[data-credit-error]');
+  const creditCancel = document.querySelector('[data-credit-cancel]');
+  const creditApply = document.querySelector('[data-credit-apply]');
+  
+  function updateCreditUI(credit) {
+    availableCredit = parseFloat(credit) || 0;
+    
+    if (creditAvailableDisplay) {
+      creditAvailableDisplay.textContent = formatCurrency(availableCredit);
+    }
+    
+    // Mostra/oculta o container de crédito
+    if (creditAvailableContainer) {
+      const isGeneric = saleData.customer && saleData.customer.is_generic;
+      if (availableCredit > 0 && !isGeneric) {
+        creditAvailableContainer.classList.remove('hidden');
+      } else {
+        creditAvailableContainer.classList.add('hidden');
+      }
+    }
+    
+    // Habilita/desabilita botão de usar crédito
+    if (useCreditBtn) {
+      const remaining = parseFloat(saleData.total || 0) - parseFloat(saleData.total_paid || 0);
+      useCreditBtn.disabled = availableCredit <= 0 || remaining <= 0;
+    }
+  }
+  
+  // Carrega crédito disponível inicial
+  const creditDataElement = document.getElementById('available-credit-data');
+  if (creditDataElement) {
+    try {
+      availableCredit = parseFloat(creditDataElement.textContent) || 0;
+      updateCreditUI(availableCredit);
+    } catch (error) {
+      console.error('Erro ao carregar crédito:', error);
+    }
+  }
+  
+  function openCreditModal() {
+    if (!creditModal || !creditModalOverlay) return;
+    
+    const remaining = parseFloat(saleData.total || 0) - parseFloat(saleData.total_paid || 0);
+    
+    // Atualiza valores no modal
+    if (modalCreditAvailable) {
+      modalCreditAvailable.textContent = formatCurrency(availableCredit);
+    }
+    if (modalRemaining) {
+      modalRemaining.textContent = formatCurrency(remaining);
+    }
+    
+    // Limpa input e erro
+    if (creditAmountInput) {
+      creditAmountInput.value = '';
+      creditAmountInput.max = Math.min(availableCredit, remaining).toFixed(2);
+    }
+    if (creditError) {
+      creditError.classList.add('hidden');
+      creditError.textContent = '';
+    }
+    
+    creditModal.classList.remove('hidden');
+    creditModalOverlay.classList.remove('hidden');
+    
+    // Foca no input
+    creditAmountInput?.focus();
+  }
+  
+  function closeCreditModalFn() {
+    if (!creditModal || !creditModalOverlay) return;
+    creditModal.classList.add('hidden');
+    creditModalOverlay.classList.add('hidden');
+  }
+  
+  // Event listeners do modal de crédito
+  useCreditBtn?.addEventListener('click', openCreditModal);
+  closeCreditModal?.addEventListener('click', closeCreditModalFn);
+  creditCancel?.addEventListener('click', closeCreditModalFn);
+  creditModalOverlay?.addEventListener('click', closeCreditModalFn);
+  
+  creditApply?.addEventListener('click', async () => {
+    if (creditError) {
+      creditError.classList.add('hidden');
+      creditError.textContent = '';
+    }
+    
+    const remaining = parseFloat(saleData.total || 0) - parseFloat(saleData.total_paid || 0);
+    let amount = parseFloat(creditAmountInput?.value || 0);
+    
+    // Se não informou valor, usa o máximo possível
+    if (!amount || amount <= 0) {
+      amount = Math.min(availableCredit, remaining);
+    }
+    
+    // Validações
+    if (amount <= 0) {
+      if (creditError) {
+        creditError.textContent = 'Informe um valor válido maior que zero.';
+        creditError.classList.remove('hidden');
+      }
+      return;
+    }
+    
+    if (amount > availableCredit) {
+      if (creditError) {
+        creditError.textContent = `Valor maior que o crédito disponível (${formatCurrency(availableCredit)}).`;
+        creditError.classList.remove('hidden');
+      }
+      return;
+    }
+    
+    if (amount > remaining) {
+      if (creditError) {
+        creditError.textContent = `Valor maior que o restante a pagar (${formatCurrency(remaining)}).`;
+        creditError.classList.remove('hidden');
+      }
+      return;
+    }
+    
+    try {
+      const result = await apiCall('/pos/apply-credit/', { amount });
+      
+      if (result.success) {
+        // Atualiza estado da venda
+        saleData = result.sale;
+        availableCredit = parseFloat(result.available_credit) || 0;
+        
+        // Atualiza UI
+        updateSaleUI(saleData);
+        updateCreditUI(availableCredit);
+        
+        // Fecha modal
+        closeCreditModalFn();
+        
+        // Mensagem de sucesso
+        console.log('Crédito aplicado com sucesso!');
+      } else {
+        if (creditError) {
+          creditError.textContent = result.error || 'Erro ao aplicar crédito.';
+          creditError.classList.remove('hidden');
+        }
+      }
+    } catch (error) {
+      if (creditError) {
+        creditError.textContent = error.message || 'Erro ao aplicar crédito.';
+        creditError.classList.remove('hidden');
+      }
+    }
   });
   
   // Inicialização

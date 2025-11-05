@@ -385,6 +385,9 @@ def finalize_sale(sale: Sale, resolution: Optional[str] = None) -> Dict[str, Any
     sale.finalized_at = timezone.now()
     sale.save(update_fields=['status', 'finalized_at'])
     
+    # Liquida créditos usados na venda
+    settle_credit_after_sale(sale)
+    
     # Atualiza o estoque dos produtos (debita as quantidades vendidas)
     for item in sale.items.select_related('product'):
         product = item.product
@@ -411,3 +414,148 @@ def reassign_ledger_entry(entry_id: int, customer_id: int) -> LedgerEntry:
     entry.save(update_fields=['customer'])
     
     return entry
+
+
+def get_customer_available_credit(customer: Customer) -> Decimal:
+    """
+    Retorna o saldo de crédito disponível do cliente.
+    Créditos em aberto - Débitos em aberto.
+    """
+    from django.db.models import Sum, Q
+    
+    # Soma de créditos em aberto
+    credits = LedgerEntry.objects.filter(
+        customer=customer,
+        type=LedgerEntry.Type.CREDIT,
+        status=LedgerEntry.Status.OPEN
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    # Soma de débitos em aberto
+    debits = LedgerEntry.objects.filter(
+        customer=customer,
+        type=LedgerEntry.Type.DEBIT,
+        status=LedgerEntry.Status.OPEN
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+    
+    return credits - debits
+
+
+@transaction.atomic
+def apply_credit_to_sale(sale: Sale, credit_amount: Decimal) -> SalePayment:
+    """
+    Aplica crédito disponível do cliente como pagamento na venda.
+    
+    Args:
+        sale: Venda onde o crédito será aplicado
+        credit_amount: Valor do crédito a ser usado
+    
+    Returns:
+        SalePayment criado
+    
+    Raises:
+        ValueError: Se o crédito for inválido ou insuficiente
+    """
+    if sale.status != Sale.Status.DRAFT:
+        raise ValueError("Apenas vendas em rascunho podem receber pagamentos")
+    
+    if credit_amount <= Decimal('0'):
+        raise ValueError("O valor do crédito deve ser maior que zero")
+    
+    # Verifica se o cliente tem crédito disponível
+    available_credit = get_customer_available_credit(sale.customer)
+    
+    if credit_amount > available_credit:
+        raise ValueError(
+            f"Crédito insuficiente. Disponível: R$ {available_credit:.2f}, "
+            f"Solicitado: R$ {credit_amount:.2f}"
+        )
+    
+    # Verifica se não ultrapassa o total da venda
+    sale = recalc_totals(sale)
+    remaining = sale.total - sale.total_paid
+    
+    if credit_amount > remaining:
+        raise ValueError(
+            f"O crédito aplicado (R$ {credit_amount:.2f}) não pode ser maior que "
+            f"o valor restante da venda (R$ {remaining:.2f})"
+        )
+    
+    # Cria um método de pagamento "Crédito" se não existir
+    credit_method, _ = PaymentMethod.objects.get_or_create(
+        name='Crédito',
+        defaults={
+            'description': 'Uso de crédito disponível do cliente',
+            'fee_percentage': Decimal('0'),
+            'fee_payer': PaymentMethod.FeePayerType.MERCHANT,
+            'is_active': True
+        }
+    )
+    
+    # Cria o pagamento
+    payment = SalePayment.objects.create(
+        sale=sale,
+        payment_method=credit_method,
+        amount_applied=credit_amount.quantize(TWO_PLACES),
+        cash_tendered=None,
+        change_given=Decimal('0')
+    )
+    
+    # Recalcula totais
+    recalc_totals(sale)
+    
+    return payment
+
+
+@transaction.atomic
+def settle_credit_after_sale(sale: Sale) -> None:
+    """
+    Liquida os créditos usados na venda após a finalização.
+    Marca os lançamentos de crédito como liquidados.
+    """
+    # Busca pagamentos com crédito nesta venda
+    credit_payments = sale.payments.filter(
+        payment_method__name='Crédito'
+    )
+    
+    if not credit_payments.exists():
+        return
+    
+    # Soma total de crédito usado
+    total_credit_used = sum(p.amount_applied for p in credit_payments)
+    
+    # Busca créditos em aberto do cliente (mais antigos primeiro)
+    open_credits = LedgerEntry.objects.filter(
+        customer=sale.customer,
+        type=LedgerEntry.Type.CREDIT,
+        status=LedgerEntry.Status.OPEN
+    ).order_by('created_at')
+    
+    remaining_to_settle = total_credit_used
+    
+    for credit in open_credits:
+        if remaining_to_settle <= Decimal('0'):
+            break
+        
+        if credit.amount <= remaining_to_settle:
+            # Liquida o crédito completamente
+            credit.status = LedgerEntry.Status.SETTLED
+            credit.settled_at = timezone.now()
+            credit.save(update_fields=['status', 'settled_at'])
+            remaining_to_settle -= credit.amount
+        else:
+            # Liquida parcialmente: divide o crédito
+            # Cria um novo lançamento liquidado com a parte usada
+            LedgerEntry.objects.create(
+                customer=credit.customer,
+                sale=sale,
+                type=LedgerEntry.Type.CREDIT,
+                status=LedgerEntry.Status.SETTLED,
+                amount=remaining_to_settle,
+                description=f'Crédito usado na venda #{sale.pk}',
+                settled_at=timezone.now()
+            )
+            
+            # Reduz o valor do crédito original
+            credit.amount -= remaining_to_settle
+            credit.save(update_fields=['amount'])
+            remaining_to_settle = Decimal('0')

@@ -4,6 +4,13 @@ from customers.models import Customer
 from products.models import Product
 
 
+class CustomerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = ['id', 'full_name', 'phone', 'cpf', 'is_generic']
+        read_only_fields = ['id']
+
+
 class SaleItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.title', read_only=True)
     product_code = serializers.IntegerField(source='product.id', read_only=True)
@@ -32,6 +39,7 @@ class SalePaymentSerializer(serializers.ModelSerializer):
 class SaleSerializer(serializers.ModelSerializer):
     items = SaleItemSerializer(many=True, read_only=True)
     payments = SalePaymentSerializer(many=True, read_only=True)
+    customer = CustomerSerializer(read_only=True)
     customer_name = serializers.CharField(source='customer.full_name', read_only=True)
     items_count = serializers.IntegerField(read_only=True)
     fee_total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)

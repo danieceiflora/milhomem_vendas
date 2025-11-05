@@ -135,6 +135,22 @@
             </div>
           </a>
         </li>
+        {% if user.is_staff %}
+        <li>
+          <a href="{% url 'pos:return_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+            <div class="flex h-6 w-6 items-center justify-center">
+              <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+            </div>
+            <span>Devoluções</span>
+            <div class="ml-auto">
+              <span class="inline-flex items-center rounded-full bg-orange-500/20 px-2 py-1 text-xs font-medium text-orange-300">
+                DEV
+              </span>
+            </div>
+          </a>
+        </li>
+        
+        {% endif %}
         <li>
           <a href="{% url 'pos:ledger_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
             <div class="flex h-6 w-6 items-center justify-center">
