@@ -835,6 +835,11 @@ class ReturnReportView(UserPassesTestMixin, ListView):
             total_count=db_models.Count('id'),
         )
         
+        # Calcula ticket médio
+        average_ticket = 0
+        if totals['total_count'] and totals['total_count'] > 0 and totals['total_amount']:
+            average_ticket = totals['total_amount'] / totals['total_count']
+        
         # Totais por status
         by_status = {}
         for status_code, status_label in Return.Status.choices:
@@ -854,10 +859,11 @@ class ReturnReportView(UserPassesTestMixin, ListView):
             by_method[method_label] = stats
         
         context['totals'] = totals
+        context['average_ticket'] = average_ticket
         context['by_status'] = by_status
         context['by_method'] = by_method
         context['status_choices'] = Return.Status.choices
         context['refund_method_choices'] = Return.RefundMethod.choices
-        context['customers'] = Customer.objects.filter(is_active=True).order_by('full_name')
+        context['customers'] = Customer.objects.order_by('full_name')
         
         return context

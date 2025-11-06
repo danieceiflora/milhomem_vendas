@@ -133,13 +133,7 @@
       </div>
       <h3 class="text-lg font-semibold">Ticket Médio</h3>
     </div>
-    <p class="text-3xl font-bold text-blue-600">
-      {% if totals.total_count %}
-        R$ {{ totals.total_amount|default:0|div:totals.total_count|floatformat:2 }}
-      {% else %}
-        R$ 0,00
-      {% endif %}
-    </p>
+    <p class="text-3xl font-bold text-blue-600">R$ {{ average_ticket|floatformat:2 }}</p>
   </div>
 </div>
 
