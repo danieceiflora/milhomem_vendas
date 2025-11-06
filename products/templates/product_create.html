@@ -31,7 +31,7 @@
       <h2 class="text-xl font-semibold">Informações do Produto</h2>
     </div>
 
-    <form method="post" class="space-y-6">
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
       {% csrf_token %}
       
       <!-- Form Fields -->
@@ -53,6 +53,21 @@
                 class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 {% if field.field.required %}required{% endif %}
               >{{ field.value|default:'' }}</textarea>
+            {% elif field.name == 'image' %}
+              <div class="space-y-3">
+                <input 
+                  type="file"
+                  id="{{ field.id_for_label }}"
+                  name="{{ field.name }}"
+                  accept="image/*"
+                  class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  {% if field.field.required %}required{% endif %}
+                  onchange="previewImage(this)"
+                >
+                <div id="image-preview" class="hidden mt-3">
+                  <img src="" alt="Preview" class="max-w-xs rounded-lg border border-border shadow-sm">
+                </div>
+              </div>
             {% elif field.name == 'category' or field.name == 'brand' or field.name == 'supplier' %}
               <select 
                 id="{{ field.id_for_label }}"
@@ -110,5 +125,25 @@
     </form>
   </div>
 </div>
+
+<script>
+function previewImage(input) {
+  const preview = document.getElementById('image-preview');
+  const img = preview.querySelector('img');
+  
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      img.src = e.target.result;
+      preview.classList.remove('hidden');
+    };
+    
+    reader.readAsDataURL(input.files[0]);
+  } else {
+    preview.classList.add('hidden');
+  }
+}
+</script>
 
 {% endblock %}

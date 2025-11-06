@@ -6,7 +6,7 @@ class ProductForm(forms.ModelForm):
 
     class Meta:
         model = models.Product
-        fields = ['title', 'category', 'brand', 'description', 'serie_number', 'cost_price', 'selling_price']
+        fields = ['title', 'category', 'brand', 'description', 'serie_number', 'cost_price', 'selling_price', 'image']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-control'}),
@@ -15,6 +15,7 @@ class ProductForm(forms.ModelForm):
             'serie_number': forms.TextInput(attrs={'class': 'form-control'}),
             'cost_price': forms.NumberInput(attrs={'class': 'form-control'}),
             'selling_price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
         }
         labels = {
             'title': 'Título',
@@ -24,4 +25,5 @@ class ProductForm(forms.ModelForm):
             'serie_number': 'Número de Série',
             'cost_price': 'Preço de Custo',
             'selling_price': 'Preço de Venda',
+            'image': 'Imagem do Produto',
         }

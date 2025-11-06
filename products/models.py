@@ -12,6 +12,13 @@ class Product(models.Model):
     cost_price = models.DecimalField(max_digits=20, decimal_places=2)
     selling_price = models.DecimalField(max_digits=20, decimal_places=2)
     quantity = models.IntegerField(default=0)
+    image = models.ImageField(
+        upload_to='products/', 
+        null=True, 
+        blank=True,
+        verbose_name='Imagem do Produto',
+        help_text='Faça upload de uma imagem do produto (JPG, PNG)'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

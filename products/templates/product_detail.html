@@ -24,12 +24,21 @@ Detalhes do Produto - {{ object.title }}
 <!-- Product Details Card -->
 <div class="max-w-6xl mx-auto">
   <div class="rounded-lg border border-border bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-green-500/10 p-8 glass-effect">
-    <!-- Header with Icon -->
-    <div class="flex items-center space-x-4 mb-8">
-      <div class="h-16 w-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-        <i data-lucide="package" class="h-8 w-8 text-white"></i>
+    <!-- Header with Icon and Image -->
+    <div class="flex flex-col md:flex-row md:items-center md:space-x-6 mb-8">
+      <!-- Product Image -->
+      <div class="mb-4 md:mb-0">
+        {% if object.image %}
+          <img src="{{ object.image.url }}" alt="{{ object.title }}" class="w-32 h-32 object-cover rounded-xl border-4 border-border shadow-lg hover:border-primary transition-all duration-200 cursor-pointer" onclick="window.open('{{ object.image.url }}', '_blank')">
+        {% else %}
+          <div class="h-32 w-32 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+            <i data-lucide="package" class="h-16 w-16 text-white"></i>
+          </div>
+        {% endif %}
       </div>
-      <div>
+      
+      <!-- Product Title -->
+      <div class="flex-1">
         <h2 class="text-2xl font-bold text-primary">{{ object.title }}</h2>
         <p class="text-muted-foreground">Produto registrado no sistema</p>
       </div>
