@@ -216,19 +216,68 @@
     <div class="flex-1 overflow-y-auto scrollbar-custom p-3" data-items-container>
       {% include 'pos/components/_items_table.html' %}
     </div>
+    
+    <!-- Resumo da Venda -->
+    <div class="border-t border-border/40 bg-gradient-to-r from-primary/5 to-secondary/5 p-3">
+      <div class="grid grid-cols-2 gap-2">
+        <!-- Subtotal -->
+        <div class="flex items-center justify-between p-2 rounded-md bg-background/50">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="shopping-bag" class="h-3.5 w-3.5 text-muted-foreground"></i>
+            <span class="text-xs text-muted-foreground">Subtotal</span>
+          </div>
+          <span class="text-sm font-bold text-foreground" data-summary-subtotal>R$ 0,00</span>
+        </div>
+        
+        <!-- Descontos -->
+        <div class="flex items-center justify-between p-2 rounded-md bg-background/50">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="badge-percent" class="h-3.5 w-3.5 text-green-400"></i>
+            <span class="text-xs text-green-400">Descontos</span>
+          </div>
+          <span class="text-sm font-bold text-green-400" data-summary-discounts>R$ 0,00</span>
+        </div>
+        
+        <!-- Taxas -->
+        <div class="flex items-center justify-between p-2 rounded-md bg-background/50">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="percent" class="h-3.5 w-3.5 text-orange-400"></i>
+            <span class="text-xs text-orange-400">Taxas</span>
+          </div>
+          <span class="text-sm font-bold text-orange-400" data-summary-fees>R$ 0,00</span>
+        </div>
+        
+        <!-- Pago -->
+        <div class="flex items-center justify-between p-2 rounded-md bg-background/50">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="wallet" class="h-3.5 w-3.5 text-blue-400"></i>
+            <span class="text-xs text-blue-400">Pago</span>
+          </div>
+          <span class="text-sm font-bold text-blue-400" data-summary-paid>R$ 0,00</span>
+        </div>
+      </div>
+      
+      <!-- Total e Restante - Destaque -->
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <div class="flex items-center justify-between p-2.5 rounded-md bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-primary/30">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="dollar-sign" class="h-4 w-4 text-primary"></i>
+            <span class="text-xs text-primary font-medium">Total</span>
+          </div>
+          <span class="text-base font-bold text-primary" data-summary-total>R$ 0,00</span>
+        </div>
+        
+        <div class="flex items-center justify-between p-2.5 rounded-md bg-red-500/10 border border-red-500/30">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="alert-circle" class="h-4 w-4 text-red-400"></i>
+            <span class="text-xs text-red-400 font-medium">Restante</span>
+          </div>
+          <span class="text-base font-bold text-red-400" data-summary-remaining>R$ 0,00</span>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- Script para mostrar/ocultar resumo PDV -->
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const summaryBar = document.getElementById('pdv-summary-bar');
-    if (summaryBar) {
-      summaryBar.classList.remove('hidden');
-      summaryBar.classList.add('flex');
-    }
-  });
-</script>
 
 <!-- Modal de Resolução de Diferença -->
 <div id="diff-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50" data-diff-modal>
