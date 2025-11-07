@@ -20,22 +20,46 @@ Gerenciar Métodos de Pagamento
   </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-  <div class="lg:col-span-1">
-    <div class="rounded-lg border border-border bg-gradient-to-br from-rose-500/10 via-orange-500/5 to-rose-500/10 p-6 glass-effect">
-      <div class="flex items-center space-x-3 mb-6">
+<div class="space-y-8">
+  <section class="rounded-lg border border-border bg-gradient-to-br from-rose-500/10 via-orange-500/5 to-rose-500/10 p-6 glass-effect">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div class="flex items-center space-x-3">
         <div class="h-12 w-12 rounded-xl bg-gradient-to-r from-rose-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
           <i data-lucide="credit-card" class="h-6 w-6"></i>
         </div>
         <div>
-          <h2 class="text-xl font-semibold">Novo método</h2>
-          <p class="text-sm text-muted-foreground">Defina nome, percentual e quem paga a taxa.</p>
+          <h2 class="text-xl font-semibold">
+            {% if editing_payment_method %}
+              Editar método
+            {% else %}
+              Novo método
+            {% endif %}
+          </h2>
+          <p class="text-sm text-muted-foreground">
+            {% if editing_payment_method %}
+              Atualize os dados de <strong>{{ editing_payment_method.name }}</strong>.
+            {% else %}
+              Defina nome, percentual e quem paga a taxa.
+            {% endif %}
+          </p>
         </div>
       </div>
+      {% if editing_payment_method %}
+        <a
+          href="{% url 'pos:payment_method_list' %}"
+          class="inline-flex items-center space-x-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          <i data-lucide="x-circle" class="h-4 w-4"></i>
+          <span>Cancelar edição</span>
+        </a>
+      {% endif %}
+    </div>
 
-      <form method="post" class="space-y-5">
+    <form method="post" class="space-y-5">
         {% csrf_token %}
-        <input type="hidden" name="action" value="create">
+        {% if not editing_payment_method %}
+          <input type="hidden" name="action" value="create">
+        {% endif %}
         {% for field in form %}
           <div class="space-y-2">
             <label for="{{ field.id_for_label }}" class="text-sm font-medium leading-none flex items-center space-x-2">
@@ -46,7 +70,7 @@ Gerenciar Métodos de Pagamento
               {% elif field.name == 'fee_payer' %}
                 <i data-lucide="users" class="h-4 w-4 text-rose-400"></i>
               {% elif field.name == 'is_active' %}
-                <i data-lucide="toggle-left" class="h-4 w-4 text-rose-400"></i>
+                {% comment %}O checkbox já indica ativação, não renderizamos ícone extra aqui{% endcomment %}
               {% else %}
                 <i data-lucide="file-text" class="h-4 w-4 text-rose-400"></i>
               {% endif %}
@@ -74,21 +98,51 @@ Gerenciar Métodos de Pagamento
           </div>
         {% endif %}
 
-        <button type="submit" class="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
-          <i data-lucide="save" class="h-4 w-4"></i>
-          <span>Cadastrar método</span>
-        </button>
+        {% if editing_payment_method %}
+          <div class="flex items-center space-x-3 pt-2">
+            <button type="submit" class="inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+              <i data-lucide="save" class="h-4 w-4"></i>
+              <span>Salvar alterações</span>
+            </button>
+            <a href="{% url 'pos:payment_method_list' %}" class="inline-flex items-center justify-center space-x-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors">
+              <span>Cancelar</span>
+            </a>
+          </div>
+        {% else %}
+          <button type="submit" class="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl">
+            <i data-lucide="save" class="h-4 w-4"></i>
+            <span>Cadastrar método</span>
+          </button>
+        {% endif %}
       </form>
-    </div>
-  </div>
+  </section>
 
-  <div class="lg:col-span-2">
-    <div class="rounded-lg border border-border bg-card glass-effect">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-border">
+  <section class="rounded-lg border border-border bg-card glass-effect">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-border gap-3">
         <div>
           <h3 class="text-lg font-semibold">Métodos cadastrados</h3>
           <p class="text-sm text-muted-foreground">Gerencie taxas, quem paga e status dos métodos.</p>
         </div>
+        <form method="get" class="flex items-center space-x-3">
+          <label class="flex items-center space-x-2 text-sm text-muted-foreground">
+            <i data-lucide="search" class="h-4 w-4"></i>
+            <span>Buscar</span>
+          </label>
+          <input
+            type="text"
+            name="q"
+            value="{{ request.GET.q }}"
+            placeholder="Nome ou descrição"
+            class="h-9 w-60 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+          >
+          <button
+            type="submit"
+            class="inline-flex items-center space-x-2 rounded-md border border-input bg-background px-3 py-2 text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          >
+            <i data-lucide="filter" class="h-4 w-4"></i>
+            <span>Filtrar</span>
+          </button>
+        </form>
       </div>
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -190,7 +244,6 @@ Gerenciar Métodos de Pagamento
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
+  </section>
 </div>
 {% endblock %}

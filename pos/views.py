@@ -482,7 +482,7 @@ class PaymentMethodListView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         form = forms.PaymentMethodForm()
-        payment_methods = PaymentMethod.objects.filter(is_internal=False)
+        payment_methods = self._get_payment_methods(request)
         return self._render(request, form, payment_methods)
 
     def post(self, request, *args, **kwargs):
@@ -503,7 +503,7 @@ class PaymentMethodListView(LoginRequiredMixin, View):
             return redirect('pos:payment_method_list')
 
         form = forms.PaymentMethodForm(request.POST)
-        payment_methods = PaymentMethod.objects.filter(is_internal=False)
+        payment_methods = self._get_payment_methods(request)
 
         if form.is_valid():
             payment_method = form.save()
@@ -513,25 +513,37 @@ class PaymentMethodListView(LoginRequiredMixin, View):
         messages.error(request, 'Corrija os erros abaixo para continuar.')
         return self._render(request, form, payment_methods)
 
-    def _render(self, request, form, payment_methods):
+    def _render(self, request, form, payment_methods, editing_payment_method=None):
         return render(
             request,
             self.template_name,
             {
                 'form': form,
                 'payment_methods': payment_methods,
+                'editing_payment_method': editing_payment_method,
             },
         )
 
+    def _get_payment_methods(self, request):
+        queryset = PaymentMethod.objects.filter(is_internal=False)
+        query = request.GET.get('q', '').strip()
+
+        if query:
+            queryset = queryset.filter(
+                Q(name__icontains=query) | Q(description__icontains=query)
+            )
+
+        return queryset.order_by('name')
+
 
 class PaymentMethodUpdateView(LoginRequiredMixin, View):
-    """View para editar um método de pagamento."""
-    template_name = 'pos/payment_method_update.html'
+    """View para editar um método de pagamento reaproveitando a tela principal."""
+    template_name = PaymentMethodListView.template_name
 
     def get(self, request, pk):
         payment_method = get_object_or_404(PaymentMethod, pk=pk, is_internal=False)
         form = forms.PaymentMethodForm(instance=payment_method)
-        return render(request, self.template_name, {'form': form, 'payment_method': payment_method})
+        return self._render(request, form, payment_method)
 
     def post(self, request, pk):
         payment_method = get_object_or_404(PaymentMethod, pk=pk, is_internal=False)
@@ -543,7 +555,28 @@ class PaymentMethodUpdateView(LoginRequiredMixin, View):
             return redirect('pos:payment_method_list')
 
         messages.error(request, 'Corrija os erros abaixo para continuar.')
-        return render(request, self.template_name, {'form': form, 'payment_method': payment_method})
+        return self._render(request, form, payment_method)
+
+    def _render(self, request, form, payment_method):
+        queryset = PaymentMethod.objects.filter(is_internal=False)
+        query = request.GET.get('q', '').strip()
+
+        if query:
+            queryset = queryset.filter(
+                Q(name__icontains=query) | Q(description__icontains=query)
+            )
+
+        queryset = queryset.order_by('name')
+
+        return render(
+            request,
+            self.template_name,
+            {
+                'form': form,
+                'payment_methods': queryset,
+                'editing_payment_method': payment_method,
+            },
+        )
 
 
 class SaleReceiptView(LoginRequiredMixin, View):

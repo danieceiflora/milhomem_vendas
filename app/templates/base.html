@@ -98,6 +98,13 @@
     .scrollbar-custom::-webkit-scrollbar-thumb:hover {
       background: hsl(221, 83%, 60%);
     }
+
+    td:empty::before,
+    dd:empty::before {
+      content: '-';
+      color: hsl(215, 20%, 65%);
+      font-style: italic;
+    }
   </style>
 </head>
 
@@ -136,6 +143,19 @@
   
   <!-- Initialize Lucide Icons -->
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('td, dd').forEach((el) => {
+        if (el.childElementCount > 0) {
+          return;
+        }
+
+        const text = el.textContent.trim();
+        if (text === '' || text.toLowerCase() === 'none') {
+          el.textContent = '';
+        }
+      });
+    });
+
     lucide.createIcons();
   </script>
 </body>

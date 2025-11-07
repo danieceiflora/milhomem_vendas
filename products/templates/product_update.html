@@ -176,36 +176,7 @@
           {% endif %}
         </div>
 
-        <!-- Image Field -->
-        <div class="space-y-2 md:col-span-2">
-          <label for="{{ form.image.id_for_label }}" class="flex items-center text-sm font-medium text-foreground">
-            <i data-lucide="image" class="w-4 h-4 mr-2 text-green-400"></i>
-            Imagem do Produto
-          </label>
-          <div class="space-y-3">
-            {% if object.image %}
-            <div class="mb-3">
-              <p class="text-sm text-muted-foreground mb-2">Imagem atual:</p>
-              <img src="{{ object.image.url }}" alt="{{ object.title }}" class="max-w-xs rounded-lg border border-border shadow-sm">
-            </div>
-            {% endif %}
-            <input 
-              type="file"
-              name="{{ form.image.name }}" 
-              id="{{ form.image.id_for_label }}"
-              accept="image/*"
-              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              onchange="previewImage(this)"
-            >
-            <div id="image-preview" class="hidden mt-3">
-              <p class="text-sm text-muted-foreground mb-2">Nova imagem:</p>
-              <img src="" alt="Preview" class="max-w-xs rounded-lg border border-border shadow-sm">
-            </div>
-          </div>
-          {% if form.image.errors %}
-            <div class="text-red-400 text-sm">{{ form.image.errors.0 }}</div>
-          {% endif %}
-        </div>
+        {% include 'components/_file_dropzone.html' with field=form.image current_image=object.image wrapper_class='md:col-span-2' icon='image' label='Imagem do Produto' %}
 
         <!-- Description Field -->
         <div class="space-y-2 md:col-span-2">
@@ -273,24 +244,5 @@
   </div>
 </div>
 
-<script>
-function previewImage(input) {
-  const preview = document.getElementById('image-preview');
-  const img = preview.querySelector('img');
-  
-  if (input.files && input.files[0]) {
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-      img.src = e.target.result;
-      preview.classList.remove('hidden');
-    };
-    
-    reader.readAsDataURL(input.files[0]);
-  } else {
-    preview.classList.add('hidden');
-  }
-}
-</script>
 
 {% endblock %}

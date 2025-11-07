@@ -12,7 +12,7 @@
         <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </div>
-    
+
     <!-- Navigation Menu -->
     <nav class="flex-1 overflow-y-auto scrollbar-custom p-4" style="max-height: calc(100vh - 120px);">
       <ul class="space-y-2">
@@ -25,52 +25,62 @@
             <span>Dashboard</span>
           </a>
         </li>
-        
-        <!-- Suppliers -->
-        {% if perms.suppliers.view_supplier %}
+
+        {% if perms.suppliers.view_supplier or perms.brands.view_brand or perms.categories.view_category or perms.products.view_product or perms.inflows.view_inflow %}
         <li>
-          <a href="{% url 'supplier_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+          <button
+            type="button"
+            class="w-full group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary"
+            data-sidebar-dropdown-toggle="inventory-menu"
+          >
             <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="truck" class="h-4 w-4"></i>
+              <i data-lucide="boxes" class="h-4 w-4"></i>
             </div>
-            <span>Fornecedores</span>
-          </a>
-        </li>
-        {% endif %}
-        
-        <!-- Brands -->
-        {% if perms.brands.view_brand %}
-        <li>
-          <a href="{% url 'brand_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="badge" class="h-4 w-4"></i>
-            </div>
-            <span>Marcas</span>
-          </a>
-        </li>
-        {% endif %}
-        
-        <!-- Categories -->
-        {% if perms.categories.view_category %}
-        <li>
-          <a href="{% url 'category_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="tags" class="h-4 w-4"></i>
-            </div>
-            <span>Categorias</span>
-          </a>
-        </li>
-        {% endif %}
-        
-        <!-- Products -->
-        {% if perms.products.view_product %}
-        <li>
-          <a href="{% url 'product_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="package" class="h-4 w-4"></i>
-            </div>
-            <span>Produtos</span>
-          </a>
+            <span class="flex-1 text-left">Estoque</span>
+            <i data-lucide="chevron-down" class="h-4 w-4 transition-transform" data-dropdown-icon></i>
+          </button>
+          <div id="inventory-menu" class="mt-2 space-y-1 pl-8 hidden" data-sidebar-dropdown-content>
+            {% if perms.suppliers.view_supplier %}
+            <a href="{% url 'supplier_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="truck" class="h-4 w-4"></i>
+              </div>
+              <span>Fornecedores</span>
+            </a>
+            {% endif %}
+            {% if perms.brands.view_brand %}
+            <a href="{% url 'brand_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="badge" class="h-4 w-4"></i>
+              </div>
+              <span>Marcas</span>
+            </a>
+            {% endif %}
+            {% if perms.categories.view_category %}
+            <a href="{% url 'category_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="tags" class="h-4 w-4"></i>
+              </div>
+              <span>Categorias</span>
+            </a>
+            {% endif %}
+            {% if perms.products.view_product %}
+            <a href="{% url 'product_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="package" class="h-4 w-4"></i>
+              </div>
+              <span>Produtos</span>
+            </a>
+            {% endif %}
+            {% if perms.inflows.view_inflow %}
+            <a href="{% url 'inflow_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="arrow-down-left" class="h-4 w-4"></i>
+              </div>
+              <span>Entradas</span>
+            </a>
+            {% endif %}
+          </div>
         </li>
         {% endif %}
 
@@ -84,104 +94,65 @@
           </a>
         </li>
         {% endif %}
-        
+
         <!-- Divider -->
         <li>
           <div class="my-4 border-t border-border/40"></div>
         </li>
-        
-        <!-- Inflows -->
-        {% if perms.inflows.view_inflow %}
+
+        <!-- PDV Dropdown -->
         <li>
-          <a href="{% url 'inflow_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+          <button
+            type="button"
+            class="w-full group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary"
+            data-sidebar-dropdown-toggle="pdv-menu"
+          >
             <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="arrow-down-left" class="h-4 w-4"></i>
+              <i data-lucide="store" class="h-4 w-4"></i>
             </div>
-            <span>Entradas</span>
-            <div class="ml-auto">
-              <span class="inline-flex items-center rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-300">
-                IN
-              </span>
-            </div>
-          </a>
+            <span class="flex-1 text-left">PDV</span>
+            <i data-lucide="chevron-down" class="h-4 w-4 transition-transform" data-dropdown-icon></i>
+          </button>
+          <div id="pdv-menu" class="mt-2 space-y-1 pl-8 hidden" data-sidebar-dropdown-content>
+            <a href="{% url 'pos:new' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="shopping-cart" class="h-4 w-4"></i>
+              </div>
+              <span>Nova Venda</span>
+            </a>
+            <a href="{% url 'pos:sale_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="list" class="h-4 w-4"></i>
+              </div>
+              <span>Histórico de Vendas</span>
+            </a>
+            {% if user.is_staff %}
+            <a href="{% url 'pos:return_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+              </div>
+              <span>Devoluções</span>
+            </a>
+            {% endif %}
+            <a href="{% url 'pos:ledger_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="file-text" class="h-4 w-4"></i>
+              </div>
+              <span>Lançamentos</span>
+            </a>
+            <a href="{% url 'pos:payment_method_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
+              <div class="flex h-6 w-6 items-center justify-center">
+                <i data-lucide="credit-card" class="h-4 w-4"></i>
+              </div>
+              <span>Métodos de Pagamento</span>
+            </a>
+          </div>
         </li>
-        {% endif %}
+
         
-        
-        <!-- PDV - Sistema de Vendas -->
-        <li>
-          <a href="{% url 'pos:new' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="shopping-cart" class="h-4 w-4"></i>
-            </div>
-            <span>Nova Venda</span>
-            <div class="ml-auto">
-              <span class="inline-flex items-center rounded-full bg-green-500/20 px-2 py-1 text-xs font-medium text-green-300">
-                PDV
-              </span>
-            </div>
-          </a>
-        </li>
-        <li>
-          <a href="{% url 'pos:sale_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="list" class="h-4 w-4"></i>
-            </div>
-            <span>Histórico de Vendas</span>
-            <div class="ml-auto">
-              <span class="inline-flex items-center rounded-full bg-blue-500/20 px-2 py-1 text-xs font-medium text-blue-300">
-                VEN
-              </span>
-            </div>
-          </a>
-        </li>
-        {% if user.is_staff %}
-        <li>
-          <a href="{% url 'pos:return_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
-            </div>
-            <span>Devoluções</span>
-            <div class="ml-auto">
-              <span class="inline-flex items-center rounded-full bg-orange-500/20 px-2 py-1 text-xs font-medium text-orange-300">
-                DEV
-              </span>
-            </div>
-          </a>
-        </li>
-        
-        {% endif %}
-        <li>
-          <a href="{% url 'pos:ledger_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="file-text" class="h-4 w-4"></i>
-            </div>
-            <span>Lançamentos</span>
-            <div class="ml-auto">
-              <span class="inline-flex items-center rounded-full bg-yellow-500/20 px-2 py-1 text-xs font-medium text-yellow-300">
-                FIN
-              </span>
-            </div>
-          </a>
-        </li>
-        
-        <!-- Divider -->
-        <li>
-          <div class="my-4 border-t border-border/40"></div>
-        </li>
-        
-        <!-- Configurações -->
-        <li>
-          <a href="{% url 'pos:payment_method_list' %}" class="group flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-primary">
-            <div class="flex h-6 w-6 items-center justify-center">
-              <i data-lucide="credit-card" class="h-4 w-4"></i>
-            </div>
-            <span>Métodos de Pagamento</span>
-          </a>
-        </li>
       </ul>
     </nav>
-    
+
     <!-- Sidebar Footer -->
     <div class="border-t border-border/40 p-4">
       {% if user.is_authenticated %}
@@ -263,6 +234,36 @@
       if (link.getAttribute('href') === currentPath) {
         link.classList.remove('text-muted-foreground');
         link.classList.add('bg-accent', 'text-primary', 'font-semibold');
+      }
+    });
+
+    const dropdownToggles = sidebar.querySelectorAll('[data-sidebar-dropdown-toggle]');
+
+    dropdownToggles.forEach(toggle => {
+      const targetId = toggle.getAttribute('data-sidebar-dropdown-toggle');
+      const content = document.getElementById(targetId);
+      const icon = toggle.querySelector('[data-dropdown-icon]');
+
+      if (!content) {
+        return;
+      }
+
+      toggle.addEventListener('click', () => {
+        content.classList.toggle('hidden');
+        if (icon) {
+          icon.classList.toggle('rotate-180');
+        }
+      });
+
+      const containsActive = Array.from(content.querySelectorAll('a')).some(link => link.getAttribute('href') === currentPath);
+
+      if (containsActive) {
+        content.classList.remove('hidden');
+        if (icon) {
+          icon.classList.add('rotate-180');
+        }
+        toggle.classList.remove('text-muted-foreground');
+        toggle.classList.add('bg-accent', 'text-primary', 'font-semibold');
       }
     });
   });

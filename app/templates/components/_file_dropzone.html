@@ -1,0 +1,162 @@
+{% with wrapper_class=wrapper_class|default:'' %}
+<div class="space-y-2 {{ wrapper_class }}" data-file-dropzone-wrapper>
+  {% with field_label=label|default:field.label %}
+  <label for="{{ field.id_for_label }}" class="flex items-center text-sm font-medium text-foreground">
+    {% if icon %}
+    <i data-lucide="{{ icon }}" class="w-4 h-4 mr-2 text-primary"></i>
+    {% else %}
+    <i data-lucide="image" class="w-4 h-4 mr-2 text-primary"></i>
+    {% endif %}
+    {{ field_label }}
+    {% if field.field.required %}
+    <span class="ml-1 text-destructive">*</span>
+    {% endif %}
+  </label>
+  {% endwith %}
+
+  {% if current_image %}
+  <div class="space-y-2 rounded-xl border border-border bg-background/50 p-4 text-sm text-muted-foreground">
+    <p class="font-medium text-foreground">Imagem atual:</p>
+    <img src="{{ current_image.url }}" alt="{{ field.value|default:'' }}" class="max-w-xs rounded-lg border border-border shadow-sm">
+  </div>
+  {% endif %}
+
+  <div data-dropzone class="space-y-2">
+    <input
+      type="file"
+      id="{{ field.id_for_label }}"
+      name="{{ field.name }}"
+      accept="image/*"
+      class="hidden"
+      {% if field.field.required %}required{% endif %}
+    >
+    <div
+      data-dropzone-area
+      class="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-secondary/40 px-6 py-10 text-center text-sm text-muted-foreground transition-all duration-200 hover:border-primary hover:bg-primary/5"
+      role="button"
+      tabindex="0"
+      aria-controls="{{ field.id_for_label }}"
+    >
+      <div class="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <i data-lucide="upload-cloud" class="h-6 w-6 text-primary"></i>
+      </div>
+      <div>
+        <p class="text-foreground font-medium">Arraste e solte a imagem aqui</p>
+        <p>ou clique para selecionar do seu computador</p>
+      </div>
+      <div class="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+        PNG, JPG, até 5MB
+      </div>
+    </div>
+    <p data-dropzone-filename class="hidden text-sm text-muted-foreground"></p>
+    <div data-dropzone-preview class="hidden space-y-2 rounded-xl border border-border bg-background/50 p-4">
+      <p class="text-sm font-medium text-foreground">Pré-visualização:</p>
+      <img data-dropzone-preview-img src="" alt="Pré-visualização" class="max-w-xs rounded-lg border border-border shadow-sm">
+    </div>
+  </div>
+
+  {% if help_text %}
+  <p class="text-xs text-muted-foreground">{{ help_text }}</p>
+  {% endif %}
+
+  {% if field.errors %}
+  <div class="text-sm font-medium text-destructive">
+    {% for error in field.errors %}
+    <p>{{ error }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endwith %}
+
+<script>
+  (function() {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('[data-dropzone]').forEach(function(zone) {
+        if (zone.dataset.initialized === 'true') {
+          return;
+        }
+
+        zone.dataset.initialized = 'true';
+
+        const input = zone.querySelector('input[type="file"]');
+        const area = zone.querySelector('[data-dropzone-area]');
+        const filename = zone.querySelector('[data-dropzone-filename]');
+        const preview = zone.querySelector('[data-dropzone-preview]');
+        const previewImg = zone.querySelector('[data-dropzone-preview-img]');
+
+        if (!input || !area) {
+          return;
+        }
+
+        const resetHighlights = function() {
+          area.classList.remove('border-primary', 'bg-primary/10');
+        };
+
+        const showFile = function(file) {
+          if (!file) {
+            return;
+          }
+
+          filename.textContent = file.name;
+          filename.classList.remove('hidden');
+
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+              if (previewImg) {
+                previewImg.src = event.target.result;
+                preview.classList.remove('hidden');
+              }
+            };
+            reader.readAsDataURL(file);
+          } else if (preview) {
+            preview.classList.add('hidden');
+          }
+        };
+
+        area.addEventListener('click', function() {
+          input.click();
+        });
+
+        area.addEventListener('keydown', function(event) {
+          const keys = ['Enter', ' ', 'Spacebar'];
+          if (keys.includes(event.key)) {
+            event.preventDefault();
+            input.click();
+          }
+        });
+
+        input.addEventListener('change', function() {
+          if (input.files && input.files.length) {
+            showFile(input.files[0]);
+          }
+        });
+
+        area.addEventListener('dragover', function(event) {
+          event.preventDefault();
+          area.classList.add('border-primary', 'bg-primary/10');
+        });
+
+        ['dragleave', 'dragend'].forEach(function(type) {
+          area.addEventListener(type, function() {
+            resetHighlights();
+          });
+        });
+
+        area.addEventListener('drop', function(event) {
+          event.preventDefault();
+          resetHighlights();
+          if (!event.dataTransfer || !event.dataTransfer.files.length) {
+            return;
+          }
+          const file = event.dataTransfer.files[0];
+          const transfer = new DataTransfer();
+          transfer.items.add(file);
+          input.files = transfer.files;
+          input.dispatchEvent(new Event('change'));
+        });
+      });
+    });
+  })();
+</script>
