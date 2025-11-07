@@ -43,7 +43,7 @@ class POSNewView(LoginRequiredMixin, View):
         serializer = SaleSerializer(sale)
         
         # Busca crédito disponível do cliente
-        available_credit = services.get_customer_available_credit(sale.customer)
+        available_credit = services.get_customer_available_credit(sale.customer, sale=sale)
         
         # Busca métodos de pagamento ativos
         payment_methods = PaymentMethod.objects.filter(is_active=True, is_internal=False)
@@ -226,7 +226,7 @@ def set_customer_view(request):
         sale = services.set_customer(sale, customer_id)
         
         # Busca crédito disponível do novo cliente
-        available_credit = services.get_customer_available_credit(sale.customer)
+        available_credit = services.get_customer_available_credit(sale.customer, sale=sale)
         
         return JsonResponse({
             'success': True,
@@ -252,7 +252,7 @@ def cancel_sale_view(request):
         
         sale = services.get_or_create_draft_sale(request.user, session_key)
         sale = services.cancel_sale(sale)
-        available_credit = services.get_customer_available_credit(sale.customer)
+        available_credit = services.get_customer_available_credit(sale.customer, sale=sale)
         
         return JsonResponse({
             'success': True,
@@ -287,7 +287,7 @@ def apply_credit_view(request):
         sale.refresh_from_db()
         
         # Atualiza crédito disponível
-        available_credit = services.get_customer_available_credit(sale.customer)
+        available_credit = services.get_customer_available_credit(sale.customer, sale=sale)
         
         return JsonResponse({
             'success': True,

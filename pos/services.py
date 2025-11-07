@@ -4,6 +4,7 @@ Funções puras que realizam operações e cálculos independentes de views.
 """
 from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 from typing import Optional, Dict, Any
 from .models import Sale, SaleItem, SalePayment, LedgerEntry, PaymentMethod
@@ -433,7 +434,17 @@ def reassign_ledger_entry(entry_id: int, customer_id: int) -> LedgerEntry:
     return entry
 
 
-def get_customer_available_credit(customer: Customer) -> Decimal:
+def _get_credit_applied_in_sale(sale: Optional[Sale]) -> Decimal:
+    """Retorna o total de crédito já aplicado na venda atual."""
+    if not sale:
+        return Decimal('0')
+
+    return sale.payments.filter(
+        payment_method__name='Crédito'
+    ).aggregate(total=Sum('amount_applied'))['total'] or Decimal('0')
+
+
+def get_customer_available_credit(customer: Customer, sale: Optional[Sale] = None) -> Decimal:
     """
     Retorna o saldo de crédito disponível do cliente.
     Créditos em aberto - Débitos em aberto.
@@ -454,7 +465,12 @@ def get_customer_available_credit(customer: Customer) -> Decimal:
         status=LedgerEntry.Status.OPEN
     ).aggregate(total=Sum('amount'))['total'] or Decimal('0')
     
-    return credits - debits
+    available = credits - debits
+
+    if sale and sale.customer_id == customer.id:
+        available -= _get_credit_applied_in_sale(sale)
+
+    return max(Decimal('0'), available)
 
 
 @transaction.atomic
@@ -479,7 +495,7 @@ def apply_credit_to_sale(sale: Sale, credit_amount: Decimal) -> SalePayment:
         raise ValueError("O valor do crédito deve ser maior que zero")
     
     # Verifica se o cliente tem crédito disponível
-    available_credit = get_customer_available_credit(sale.customer)
+    available_credit = get_customer_available_credit(sale.customer, sale=sale)
     
     if credit_amount > available_credit:
         raise ValueError(
