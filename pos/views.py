@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.decorators import login_required
@@ -46,7 +46,7 @@ class POSNewView(LoginRequiredMixin, View):
         available_credit = services.get_customer_available_credit(sale.customer)
         
         # Busca métodos de pagamento ativos
-        payment_methods = PaymentMethod.objects.filter(is_active=True)
+        payment_methods = PaymentMethod.objects.filter(is_active=True, is_internal=False)
         payment_methods_data = [
             {
                 'id': pm.id,
@@ -238,6 +238,31 @@ def set_customer_view(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
     except Exception as e:
         return JsonResponse({'success': False, 'error': 'Erro ao definir cliente'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def cancel_sale_view(request):
+    """Reinicia a venda em rascunho do usuário descartando itens e pagamentos."""
+    try:
+        session_key = request.session.session_key
+        if not session_key:
+            request.session.create()
+            session_key = request.session.session_key
+        
+        sale = services.get_or_create_draft_sale(request.user, session_key)
+        sale = services.cancel_sale(sale)
+        available_credit = services.get_customer_available_credit(sale.customer)
+        
+        return JsonResponse({
+            'success': True,
+            'sale': SaleSerializer(sale).data,
+            'available_credit': str(available_credit)
+        })
+    except ValueError as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Erro ao cancelar venda'}, status=500)
 
 
 @login_required
@@ -457,7 +482,7 @@ class PaymentMethodListView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         form = forms.PaymentMethodForm()
-        payment_methods = PaymentMethod.objects.all()
+        payment_methods = PaymentMethod.objects.filter(is_internal=False)
         return self._render(request, form, payment_methods)
 
     def post(self, request, *args, **kwargs):
@@ -465,7 +490,7 @@ class PaymentMethodListView(LoginRequiredMixin, View):
 
         if action == 'toggle':
             method_id = request.POST.get('payment_method_id')
-            payment_method = PaymentMethod.objects.filter(pk=method_id).first()
+            payment_method = PaymentMethod.objects.filter(pk=method_id, is_internal=False).first()
 
             if not payment_method:
                 messages.error(request, 'Método de pagamento não encontrado.')
@@ -478,7 +503,7 @@ class PaymentMethodListView(LoginRequiredMixin, View):
             return redirect('pos:payment_method_list')
 
         form = forms.PaymentMethodForm(request.POST)
-        payment_methods = PaymentMethod.objects.all()
+        payment_methods = PaymentMethod.objects.filter(is_internal=False)
 
         if form.is_valid():
             payment_method = form.save()
@@ -504,12 +529,12 @@ class PaymentMethodUpdateView(LoginRequiredMixin, View):
     template_name = 'pos/payment_method_update.html'
 
     def get(self, request, pk):
-        payment_method = get_object_or_404(PaymentMethod, pk=pk)
+        payment_method = get_object_or_404(PaymentMethod, pk=pk, is_internal=False)
         form = forms.PaymentMethodForm(instance=payment_method)
         return render(request, self.template_name, {'form': form, 'payment_method': payment_method})
 
     def post(self, request, pk):
-        payment_method = get_object_or_404(PaymentMethod, pk=pk)
+        payment_method = get_object_or_404(PaymentMethod, pk=pk, is_internal=False)
         form = forms.PaymentMethodForm(request.POST, instance=payment_method)
 
         if form.is_valid():
@@ -693,9 +718,20 @@ class ReturnCreateView(UserPassesTestMixin, View):
                         try:
                             quantity = int(quantity_str)
                             if quantity > 0:
+                                price_key = f'price_{sale_item_id}'
+                                price_value = request.POST.get(price_key, '').strip()
+                                unit_price = None
+                                if price_value:
+                                    try:
+                                        unit_price = Decimal(price_value.replace(',', '.'))
+                                    except (InvalidOperation, ValueError):
+                                        raise return_services.ReturnValidationError(
+                                            'Valor unitário inválido informado para um dos itens selecionados.'
+                                        )
                                 items_data.append({
                                     'sale_item_id': int(sale_item_id),
-                                    'quantity': quantity
+                                    'quantity': quantity,
+                                    'unit_price': unit_price
                                 })
                         except ValueError:
                             continue

@@ -114,14 +114,17 @@ class LedgerEntryAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentMethod)
 class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ('name', 'fee_display', 'fee_payer_badge', 'is_active_badge', 'updated_at')
-    list_filter = ('is_active', 'fee_payer')
+    list_display = (
+        'name', 'fee_display', 'fee_payer_badge',
+        'is_active_badge', 'internal_badge', 'updated_at'
+    )
+    list_filter = ('is_active', 'fee_payer', 'is_internal')
     search_fields = ('name', 'description')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'is_internal')
     
     fieldsets = (
         ('Informações Básicas', {
-            'fields': ('name', 'description', 'is_active')
+            'fields': ('name', 'description', 'is_active', 'is_internal')
         }),
         ('Configuração de Taxa', {
             'fields': ('fee_percentage', 'fee_payer'),
@@ -158,6 +161,16 @@ class PaymentMethodAdmin(admin.ModelAdmin):
             '<span style="background-color: gray; color: white; padding: 3px 8px; border-radius: 3px;">✗ Inativo</span>'
         )
     is_active_badge.short_description = 'Status'
+
+    def internal_badge(self, obj):
+        if obj.is_internal:
+            return format_html(
+                '<span style="background-color: #4c1d95; color: white; padding: 3px 8px; border-radius: 3px;">Interno</span>'
+            )
+        return format_html(
+            '<span style="background-color: #6b7280; color: white; padding: 3px 8px; border-radius: 3px;">Externo</span>'
+        )
+    internal_badge.short_description = 'Uso'
 
 
 class ReturnItemInline(admin.TabularInline):

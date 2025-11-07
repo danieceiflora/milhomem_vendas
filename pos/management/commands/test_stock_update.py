@@ -3,7 +3,7 @@ Comando para testar atualização de estoque ao finalizar venda.
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from pos.models import Sale
+from pos.models import Sale, PaymentMethod
 from pos import services
 from products.models import Product
 
@@ -49,8 +49,7 @@ class Command(BaseCommand):
         services.add_item(sale, product.id, quantity_to_sell)
         
         # Adiciona pagamento (simula pagamento em dinheiro)
-        from pos.models import PaymentMethod
-        payment_method = PaymentMethod.objects.filter(is_active=True).first()
+        payment_method = PaymentMethod.objects.filter(is_active=True, is_internal=False).first()
         
         if not payment_method:
             self.stdout.write(self.style.ERROR('❌ Nenhum método de pagamento encontrado'))

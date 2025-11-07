@@ -90,6 +90,21 @@
                 class="w-24 px-3 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               >
             </div>
+            <div>
+              <label for="price_{{ item_data.item.id }}" class="block text-sm font-medium mb-1">
+                Valor unitário (R$)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                id="price_{{ item_data.item.id }}"
+                name="price_{{ item_data.item.id }}"
+                value="{{ item_data.item.unit_price|floatformat:2 }}"
+                class="w-28 px-3 py-2 bg-background text-foreground border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+              <p class="mt-1 text-xs text-muted-foreground">Ajuste conforme o valor realmente recebido.</p>
+            </div>
             <div class="text-right">
               <p class="text-sm text-muted-foreground">Subtotal</p>
               <p class="font-semibold text-lg" id="subtotal_{{ item_data.item.id }}">R$ 0,00</p>
@@ -225,10 +240,20 @@
         continue;
       }
       
+      const priceInput = document.getElementById('price_' + itemId);
+      let unitPrice = data.price;
+      if (priceInput) {
+        const rawValue = priceInput.value.replace(',', '.');
+        const parsed = parseFloat(rawValue);
+        if (!isNaN(parsed)) {
+          unitPrice = parsed;
+        }
+      }
+
       const quantity = parseInt(input.value) || 0;
-      const subtotal = quantity * data.price;
+      const subtotal = quantity * unitPrice;
       
-      console.log(`Item ${itemId}: qty=${quantity}, price=${data.price}, subtotal=${subtotal}`);
+  console.log(`Item ${itemId}: qty=${quantity}, price=${unitPrice}, subtotal=${subtotal}`);
       
       // Atualizar subtotal do item
       const subtotalEl = document.getElementById('subtotal_' + itemId);
@@ -236,7 +261,7 @@
         subtotalEl.textContent = formatCurrency(subtotal);
       }
       
-      total += subtotal;
+  total += subtotal;
       
       if (quantity > 0) {
         hasItems = true;
@@ -259,7 +284,7 @@
     console.log('Has reason:', hasReason, 'Reason text:', reasonField ? reasonField.value : 'N/A');
     
     if (submitBtn) {
-      submitBtn.disabled = !(hasItems && hasReason);
+  submitBtn.disabled = !(hasItems && hasReason);
       console.log('Button disabled:', submitBtn.disabled);
     }
   }
@@ -275,6 +300,13 @@
         input.addEventListener('input', updateTotal);
         input.addEventListener('change', updateTotal);
         console.log('Listener added to item', itemId);
+      }
+
+      const priceInput = document.getElementById('price_' + itemId);
+      if (priceInput) {
+        priceInput.addEventListener('input', updateTotal);
+        priceInput.addEventListener('change', updateTotal);
+        console.log('Listener added to price', itemId);
       }
     }
     

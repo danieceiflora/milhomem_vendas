@@ -33,6 +33,11 @@ class PaymentMethod(models.Model):
         help_text='Lojista = desconto no valor | Cliente = acréscimo no valor'
     )
     is_active = models.BooleanField('Ativo', default=True)
+    is_internal = models.BooleanField(
+        'Uso interno',
+        default=False,
+        help_text='Método reservado para fluxos automáticos do sistema'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

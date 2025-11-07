@@ -1,11 +1,15 @@
 import re
 from django.db.models import Q
-from rest_framework import generics, permissions
+from django.db.models.deletion import ProtectedError
+from django.contrib import messages
+from django.http import HttpResponseRedirect
+from rest_framework import generics, permissions, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
+from rest_framework.response import Response
 from app import metrics
 from brands.models import Brand
 from categories.models import Category
@@ -74,6 +78,24 @@ class ProductDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView)
     success_url = reverse_lazy('product_list')
     permission_required = 'products.delete_product'
 
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        block_reason = self.object.deletion_block_reason()
+
+        if block_reason:
+            messages.error(request, block_reason)
+            return HttpResponseRedirect(self.get_success_url())
+
+        try:
+            return super().post(request, *args, **kwargs)
+        except ProtectedError:
+            messages.error(
+                request,
+                self.object.deletion_block_reason()
+                or 'Não é possível excluir este produto porque ele está relacionado a vendas ou devoluções.'
+            )
+            return HttpResponseRedirect(self.get_success_url())
+
 
 class ProductCreateListAPIView(generics.ListCreateAPIView):
     authentication_classes = (SessionAuthentication, JWTAuthentication)
@@ -106,3 +128,21 @@ class ProductRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView)
     permission_classes = (permissions.IsAuthenticated,)
     queryset = models.Product.objects.all()
     serializer_class = serializers.ProductSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        product = self.get_object()
+        block_reason = product.deletion_block_reason()
+
+        if block_reason:
+            return Response({'detail': block_reason}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError:
+            return Response(
+                {
+                    'detail': block_reason
+                    or 'Não é possível excluir este produto porque ele está relacionado a vendas ou devoluções.'
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )

@@ -18,4 +18,4 @@ RUN crontab /etc/cron.d/cron
 
 EXPOSE 8001
 
-CMD cron ; python manage.py migrate && python manage.py runserver 0.0.0.0:8001
+CMD cron ; python manage.py migrate && python scripts/populate_demo_data.py && python manage.py runserver 0.0.0.0:8001

@@ -224,6 +224,23 @@ def set_customer(sale: Sale, customer_id: Optional[int]) -> Sale:
     return sale
 
 
+@transaction.atomic
+def cancel_sale(sale: Sale) -> Sale:
+    """Limpa itens, pagamentos e dados auxiliares mantendo o rascunho ativo."""
+    if sale.status != Sale.Status.DRAFT:
+        raise ValueError("Apenas vendas em rascunho podem ser canceladas")
+
+    sale.items.all().delete()
+    sale.payments.all().delete()
+
+    sale.customer = get_or_create_generic_customer()
+    sale.discount_total = Decimal('0')
+    sale.notes = ''
+    sale.save(update_fields=['customer', 'discount_total', 'notes'])
+
+    return recalc_totals(sale)
+
+
 def recalc_totals(sale: Sale) -> Sale:
     """
     Recalcula todos os totais da venda baseado nos itens e pagamentos.
@@ -487,9 +504,29 @@ def apply_credit_to_sale(sale: Sale, credit_amount: Decimal) -> SalePayment:
             'description': 'Uso de crédito disponível do cliente',
             'fee_percentage': Decimal('0'),
             'fee_payer': PaymentMethod.FeePayerType.MERCHANT,
-            'is_active': True
+            'is_active': True,
+            'is_internal': True,
         }
     )
+
+    fields_to_update = []
+    if not credit_method.is_internal:
+        credit_method.is_internal = True
+        fields_to_update.append('is_internal')
+    if not credit_method.is_active:
+        credit_method.is_active = True
+        fields_to_update.append('is_active')
+    if credit_method.fee_payer != PaymentMethod.FeePayerType.MERCHANT:
+        credit_method.fee_payer = PaymentMethod.FeePayerType.MERCHANT
+        fields_to_update.append('fee_payer')
+    if credit_method.fee_percentage != Decimal('0'):
+        credit_method.fee_percentage = Decimal('0')
+        fields_to_update.append('fee_percentage')
+    if credit_method.description != 'Uso de crédito disponível do cliente':
+        credit_method.description = 'Uso de crédito disponível do cliente'
+        fields_to_update.append('description')
+    if fields_to_update:
+        credit_method.save(update_fields=fields_to_update)
     
     # Cria o pagamento
     payment = SalePayment.objects.create(

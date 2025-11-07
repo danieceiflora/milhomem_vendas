@@ -149,14 +149,24 @@
     
     <!-- Botão Finalizar -->
     <div class="sticky bottom-0 bg-card/95 backdrop-blur-lg p-3 -mx-2 border-t border-border/40">
-      <button
-        type="button"
-        class="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50"
-        data-finalize-btn
-      >
-        <i data-lucide="check" class="h-4 w-4"></i>
-        <span>Finalizar Venda</span>
-      </button>
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          class="w-full inline-flex items-center justify-center space-x-2 border border-red-500 text-red-500 hover:bg-red-500/10 px-6 py-2.5 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
+          data-cancel-sale-btn
+        >
+          <i data-lucide="x-circle" class="h-4 w-4"></i>
+          <span>Cancelar Venda</span>
+        </button>
+        <button
+          type="button"
+          class="w-full inline-flex items-center justify-center space-x-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50"
+          data-finalize-btn
+        >
+          <i data-lucide="check" class="h-4 w-4"></i>
+          <span>Finalizar Venda</span>
+        </button>
+      </div>
     </div>
   </div>
   

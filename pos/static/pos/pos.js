@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Estado global da venda
   let saleData = parseJsonScript('sale-data');
+  let availableCredit = 0;
   const paymentMethodsData = parseJsonScript('payment-methods-data') || [];
   
   console.log('Sale data:', saleData);
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const paymentsList = document.querySelector('[data-payments-list]');
   
   const finalizeBtn = document.querySelector('[data-finalize-btn]');
+  const cancelSaleBtn = document.querySelector('[data-cancel-sale-btn]');
   const diffModal = document.querySelector('[data-diff-modal]');
   const diffMessage = document.querySelector('[data-diff-message]');
   const diffOptions = document.querySelector('[data-diff-options]');
@@ -119,6 +121,25 @@ document.addEventListener('DOMContentLoaded', function() {
       window.lucide.createIcons();
     }
   }
+
+  function resetSaleUI() {
+    if (customerSearch) customerSearch.value = '';
+    customerResults?.classList.add('hidden');
+    customerSelected?.classList.add('hidden');
+    if (customerName) customerName.textContent = '';
+    if (customerDetails) customerDetails.textContent = '';
+    if (productSearch) productSearch.value = '';
+    productResults?.classList.add('hidden');
+    if (productQuantity) productQuantity.value = '1';
+    selectedProduct = null;
+    if (paymentMethodSelect) paymentMethodSelect.value = '';
+    cashFields?.classList.add('hidden');
+    otherFields?.classList.add('hidden');
+    if (cashTendered) cashTendered.value = '';
+    if (paymentAmount) paymentAmount.value = '';
+    addProductBtn && (addProductBtn.disabled = true);
+    addPaymentBtn && (addPaymentBtn.disabled = true);
+  }
   
   function getCsrfToken() {
     // Busca em cookies primeiro
@@ -169,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
     renderItems();
     renderPayments();
     updateSummary();
+    updateCreditUI(availableCredit);
     renderLucide();
   }
   
@@ -728,6 +750,25 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // Finalizar venda
+  cancelSaleBtn?.addEventListener('click', async () => {
+    if (!confirm('Cancelar a venda atual e limpar o formulário?')) {
+      return;
+    }
+
+    cancelSaleBtn.disabled = true;
+
+    try {
+      const result = await apiCall('/pos/cancel-sale/', {});
+      availableCredit = parseFloat(result.available_credit) || 0;
+      updateSaleUI(result.sale);
+      resetSaleUI();
+    } catch (error) {
+      alert('Erro ao cancelar venda: ' + error.message);
+    } finally {
+      cancelSaleBtn.disabled = false;
+    }
+  });
+
   finalizeBtn?.addEventListener('click', async () => {
     if (!saleData.items || saleData.items.length === 0) {
       alert('Adicione pelo menos um item à venda');
@@ -838,8 +879,6 @@ document.addEventListener('DOMContentLoaded', function() {
   // ============================================================================
   // GERENCIAMENTO DE CRÉDITO
   // ============================================================================
-  
-  let availableCredit = 0;
   
   // Elementos do crédito
   const creditAvailableContainer = document.querySelector('[data-credit-available-container]');

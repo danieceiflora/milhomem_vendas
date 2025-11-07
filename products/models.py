@@ -27,3 +27,28 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+
+    def deletion_block_reason(self) -> str | None:
+        """Retorna o motivo para impedir exclusão, se existir."""
+        if self.quantity and self.quantity > 0:
+            return 'Não é possível excluir este produto porque ainda possui estoque disponível.'
+
+        if not self.pk:
+            return None
+
+        from django.apps import apps
+
+        SaleItem = apps.get_model('pos', 'SaleItem')
+        ReturnItem = apps.get_model('pos', 'ReturnItem')
+
+        if SaleItem.objects.filter(product_id=self.pk).exists():
+            return 'Não é possível excluir este produto porque ele já foi utilizado em vendas.'
+
+        if ReturnItem.objects.filter(product_id=self.pk).exists():
+            return 'Não é possível excluir este produto porque ele já foi utilizado em devoluções.'
+
+        return None
+
+    def can_be_deleted(self) -> bool:
+        """Indica se o produto pode ser excluído com segurança."""
+        return self.deletion_block_reason() is None

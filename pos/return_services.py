@@ -1,7 +1,7 @@
 """
 Serviços de lógica de negócio para devoluções (Returns).
 """
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from typing import Dict, List
 from django.db import transaction
 from django.db.models import Sum
@@ -73,6 +73,33 @@ def validate_return_items(sale: Sale, items_data: List[Dict]) -> None:
                 f'já devolvido: {already_returned}).'
             )
 
+        raw_unit_price = item_data.get('unit_price')
+        if raw_unit_price in (None, ''):
+            unit_price = sale_item.unit_price
+        else:
+            try:
+                unit_price = Decimal(str(raw_unit_price))
+            except (InvalidOperation, ValueError, TypeError):
+                raise ReturnValidationError(
+                    f'Valor unitário inválido para o item {sale_item.product.title}.'
+                )
+
+        unit_price = unit_price.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+
+        if unit_price < Decimal('0'):
+            raise ReturnValidationError(
+                f'Valor unitário inválido para {sale_item.product.title}: não pode ser negativo.'
+            )
+
+        max_unit_price = sale_item.unit_price.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+        if unit_price > max_unit_price:
+            raise ReturnValidationError(
+                f'Valor unitário para {sale_item.product.title} não pode exceder o valor original (R$ {max_unit_price}).'
+            )
+
+        item_data['unit_price'] = unit_price
+        item_data['sale_item'] = sale_item
+
 
 def calculate_return_total(items_data: List[Dict]) -> Decimal:
     """
@@ -87,9 +114,12 @@ def calculate_return_total(items_data: List[Dict]) -> Decimal:
     total = Decimal('0')
     
     for item_data in items_data:
-        sale_item = SaleItem.objects.get(id=item_data['sale_item_id'])
+        sale_item = item_data.get('sale_item')
+        if sale_item is None:
+            sale_item = SaleItem.objects.get(id=item_data['sale_item_id'])
         quantity = Decimal(str(item_data['quantity']))
-        line_total = (sale_item.unit_price * quantity).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+        unit_price = item_data.get('unit_price', sale_item.unit_price)
+        line_total = (unit_price * quantity).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
         total += line_total
     
     return total.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
@@ -141,15 +171,18 @@ def create_return(
     
     # Criar itens da devolução
     for item_data in items_data:
-        sale_item = SaleItem.objects.get(id=item_data['sale_item_id'])
+        sale_item = item_data.get('sale_item')
+        if sale_item is None:
+            sale_item = SaleItem.objects.get(id=item_data['sale_item_id'])
         quantity = item_data['quantity']
+        unit_price = item_data.get('unit_price', sale_item.unit_price)
         
         ReturnItem.objects.create(
             return_instance=return_instance,
             sale_item=sale_item,
             product=sale_item.product,
             quantity=quantity,
-            unit_price=sale_item.unit_price
+            unit_price=unit_price
         )
     
     return return_instance

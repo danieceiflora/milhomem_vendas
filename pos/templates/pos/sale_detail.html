@@ -44,13 +44,6 @@
         <span>Imprimir Recibo</span>
       </a>
       {% endif %}
-      <button
-        onclick="window.print()"
-        class="inline-flex items-center space-x-2 border border-border hover:bg-muted px-4 py-2 rounded-lg transition-all duration-200"
-      >
-        <i data-lucide="file-text" class="h-4 w-4"></i>
-        <span>Imprimir Detalhes</span>
-      </button>
     </div>
   </div>
 </div>
@@ -114,7 +107,7 @@
               </td>
               <td class="px-2 py-3 text-sm text-center">{{ item.quantity }}</td>
               <td class="px-2 py-3 text-sm text-right">R$ {{ item.unit_price|floatformat:2 }}</td>
-              <td class="px-2 py-3 text-sm text-right font-medium">R$ {{ item.subtotal|floatformat:2 }}</td>
+              <td class="px-2 py-3 text-sm text-right font-medium">R$ {{ item.line_total|floatformat:2 }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -145,7 +138,7 @@
             </div>
             {% endif %}
           </div>
-          <div class="font-bold text-green-500">R$ {{ payment.amount|floatformat:2 }}</div>
+          <div class="font-bold text-green-500">R$ {{ payment.amount_applied|floatformat:2 }}</div>
         </div>
         {% endfor %}
       </div>

@@ -33,6 +33,7 @@ urlpatterns = [
     
     # Cliente e finalização
     path('set-customer/', views.set_customer_view, name='set_customer'),
+    path('cancel-sale/', views.cancel_sale_view, name='cancel_sale'),
     path('finalize/', views.finalize_view, name='finalize'),
     
     # Lançamentos (ledger)
